@@ -1,0 +1,3 @@
+[submodule "i18n"]
+	path = i18n
+	url = https://gitlab.com/CoiaPrant/Topicgram-i18n.git

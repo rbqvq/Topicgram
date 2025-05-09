@@ -1,0 +1,31 @@
+{
+    "Web": {
+        "Type": "unix",
+        "Listen": "/run/Topicgram.sock"
+    },
+    "Database": {
+        "Type": "postgres",
+        "Postgres": {
+            "Host": "localhost",
+            "Port": 9920,
+            "User": "topicgram",
+            "Password": "password",
+            "Name": "topicgram",
+            "TLS": false,
+            "Cert": "",
+            "Key": ""
+        }
+    },
+    "Bot": {
+        "Token": "",
+        "GroupId": 0,
+        "LanguageCode": "zh-hans",
+        "WebHook": {
+            "Host": ""
+        }
+    },
+    "Security": {
+        "InsecureSkipVerify": false
+    },
+    "Proxy": ""
+}

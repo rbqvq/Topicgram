@@ -1,0 +1,28 @@
+{
+    "Web": {
+        "Type": "unix",
+        "Listen": "/run/Topicgram.sock"
+    },
+    "Database": {
+        "Type": "mysql",
+        "MySQL": {
+            "Host": "localhost",
+            "Port": 3306,
+            "User": "topicgram",
+            "Password": "password",
+            "Name": "topicgram"
+        }
+    },
+    "Bot": {
+        "Token": "",
+        "GroupId": 0,
+        "LanguageCode": "zh-hans",
+        "WebHook": {
+            "Host": ""
+        }
+    },
+    "Security": {
+        "InsecureSkipVerify": false
+    },
+    "Proxy": ""
+}

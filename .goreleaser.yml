@@ -1,0 +1,56 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+version: 2
+
+project_name: Topicgram
+
+gitlab_urls:
+  use_package_registry: true
+  use_job_token: true
+
+before:
+  hooks:
+    - git submodule update --init
+    - go mod tidy -v
+
+builds:
+  - main: ./cmd/Topicgram
+    binary: Topicgram
+    tool: "go"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .Commit }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: Topicgram
+    ids:
+      - Topicgram
+    formats: ["tar.gz"]
+    strip_binary_directory: true
+    name_template: '{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
+    format_overrides:
+      - goos: windows
+        formats: ["zip"]
+    files:
+      - README.md
+      - LICENSE
+      - docs
+      - examples
+      - systemd
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  gitlab:
+    owner: CoiaPrant
+    name: Topicgram
+  mode: replace

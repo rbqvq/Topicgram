@@ -1,0 +1,32 @@
+{
+    "Web": {
+        "Type": "unix",
+        "Listen": "/run/Topicgram.sock"
+    },
+    "Database": {
+        "Type": "oracle",
+        "Oracle": {
+            "Host": "localhost",
+            "Port": 1521,
+            "User": "topicgram",
+            "Password": "password",
+            "Service": "topicgram",
+            "AuthType": "tcps",
+            "TLS": false,
+            "WalletPath": "",
+            "WalletPassword": "password"
+        }
+    },
+    "Bot": {
+        "Token": "",
+        "GroupId": 0,
+        "LanguageCode": "zh-hans",
+        "WebHook": {
+            "Host": ""
+        }
+    },
+    "Security": {
+        "InsecureSkipVerify": false
+    },
+    "Proxy": ""
+}

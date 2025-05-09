@@ -1,0 +1,10 @@
+# IDE
+.idea
+.vscode
+
+# Build
+dist/
+
+# CI Cache
+.go/
+.docker/

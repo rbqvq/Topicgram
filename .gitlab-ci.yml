@@ -1,0 +1,89 @@
+stages:
+  - test
+  - build
+  - release
+
+test:
+  stage: test
+  image: golang:latest
+  variables:
+    GOCACHE: /tmp/go-build-cache
+    GOPATH: /tmp/go-cache
+    GOTOOLCHAIN: local
+    GIT_SUBMODULE_STRATEGY: recursive
+    GIT_DEPTH: 0
+    GIT_SUBMODULE_DEPTH: 0
+  only:
+    refs:
+      - pushes
+  before_script:
+    # Go Cache
+    - sh -c 'mount -t tmpfs tmpfs /tmp || exit 0'
+    - mkdir -p $GOCACHE
+    - mkdir -p $GOPATH/src
+    # Link default GOPATH
+    - rm -rf /go
+    - ln -sf $GOPATH /go
+  script:
+    - go mod tidy -v
+    - go test ./cmd/Topicgram -v
+
+snapshot:
+  stage: release
+  image:
+    name: goreleaser/goreleaser:nightly
+    entrypoint: [""]
+  variables:
+    GOCACHE: /tmp/go-build-cache
+    GOPATH: /tmp/go-cache
+    GOTOOLCHAIN: local
+    GIT_SUBMODULE_STRATEGY: recursive
+    GIT_DEPTH: 0
+    GIT_SUBMODULE_DEPTH: 0
+    GITLAB_TOKEN: $CI_JOB_TOKEN
+  only:
+    refs:
+      - web
+  before_script:
+    # Go Cache
+    - sh -c 'mount -t tmpfs tmpfs /tmp || exit 0'
+    - mkdir -p $GOCACHE
+    - mkdir -p $GOPATH/src
+    # Link default GOPATH
+    - rm -rf /go
+    - ln -sf $GOPATH /go
+  script:
+    - goreleaser release --clean --snapshot --skip=docker
+  artifacts:
+    paths:
+      - dist/*.tar.gz
+      - dist/config.yaml
+      - dist/checksums.txt
+    expire_in: 1 week
+
+release:
+  stage: release
+  image:
+    name: goreleaser/goreleaser:nightly
+    entrypoint: [""]
+  variables:
+    GOCACHE: /tmp/go-build-cache
+    GOPATH: /tmp/go-cache
+    GOTOOLCHAIN: local
+    GIT_SUBMODULE_STRATEGY: recursive
+    GIT_DEPTH: 0
+    GIT_SUBMODULE_DEPTH: 0
+    GITLAB_TOKEN: $CI_JOB_TOKEN
+  only:
+    refs:
+      - tags
+  before_script:
+    # Go Cache
+    - sh -c 'mount -t tmpfs tmpfs /tmp || exit 0'
+    - mkdir -p $GOCACHE
+    - mkdir -p $GOPATH/src
+    # Link default GOPATH
+    - rm -rf /go
+    - ln -sf $GOPATH /go
+  script:
+    - goreleaser release --clean

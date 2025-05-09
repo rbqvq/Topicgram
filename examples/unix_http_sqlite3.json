@@ -1,0 +1,26 @@
+{
+    "Web": {
+        "Type": "unix",
+        "Listen": "/run/Topicgram.sock"
+    },
+    "Database": {
+        "Type": "sqlite3",
+        "SQLite3": {
+            "File": "sqlite.db",
+            "BusyTimeout": 5000,
+            "JournalMode": "WAL"
+        }
+    },
+    "Bot": {
+        "Token": "",
+        "GroupId": 0,
+        "LanguageCode": "zh-hans",
+        "WebHook": {
+            "Host": ""
+        }
+    },
+    "Security": {
+        "InsecureSkipVerify": false
+    },
+    "Proxy": ""
+}

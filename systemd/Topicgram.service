@@ -1,0 +1,28 @@
+[Unit]
+Description=Topicgram Service
+Documentation=https://gitlab.com/CoiaPrant/Topicgram
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Restart=always
+RestartSec=20s
+TasksMax=infinity
+LimitCPU=infinity
+LimitFSIZE=infinity
+LimitDATA=infinity
+LimitSTACK=infinity
+LimitCORE=infinity
+LimitRSS=infinity
+LimitNOFILE=infinity
+LimitAS=infinity
+LimitNPROC=infinity
+LimitSIGPENDING=infinity
+LimitMSGQUEUE=infinity
+LimitRTTIME=infinity
+WorkingDirectory=/opt/Topicgram
+ExecStart=/opt/Topicgram/Topicgram --config config.json
+
+[Install]
+WantedBy=multi-user.target

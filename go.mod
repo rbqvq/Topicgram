@@ -5,15 +5,16 @@ go 1.24
 toolchain go1.24.0
 
 require (
-	github.com/OvyFlash/telegram-bot-api v0.0.0-20250501121306-e13ca08617c9
+	github.com/OvyFlash/telegram-bot-api v0.0.0-20250511194450-d315c30d9c40
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-sql-driver/mysql v1.9.2
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/sijms/go-ora/v2 v2.8.24
+	gitlab.com/CoiaPrant/cache2go v0.0.0-20240325160109-49e77b656916
 	gitlab.com/CoiaPrant/clog v0.0.0-20240125121733-757221e3362e
 	gitlab.com/CoiaPrant/gorm-oracle v0.0.0-20240918134211-d5a75ee51b3c
 	gitlab.com/CoiaPrant/gorm-sqlite v0.0.0-20240918134430-b2787d19694e
-	gitlab.com/CoiaPrant/telegram-bot-formatter v0.0.0-20250506143618-5a99780a3a16
+	gitlab.com/CoiaPrant/telegram-bot-formatter v0.0.0-20250513082100-acf0beaa111d
 	gitlab.com/go-extension/rand v0.0.0-20240303103951-707937a049b5
 	golang.org/x/net v0.40.0
 	gorm.io/driver/mysql v1.5.7
@@ -62,7 +63,7 @@ require (
 	golang.org/x/text v0.25.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	modernc.org/libc v1.65.2 // indirect
+	modernc.org/libc v1.65.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.10.0 // indirect
 	modernc.org/sqlite v1.37.0 // indirect

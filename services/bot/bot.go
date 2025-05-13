@@ -5,6 +5,7 @@ import (
 	"Topicgram/i18n"
 	"Topicgram/model"
 	"Topicgram/utils"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -98,7 +99,13 @@ func Init(botConfig *model.BotConfig) error {
 		})
 	})
 
-	bot = &Bot{BotConfig: botConfig, BotAPI: &BotAPI{BotAPI: b}}
+	mediaGroups := NewMediaGroupCache()
+	mediaGroups.AddAboutToDeleteItemCallback(func(item mediaGroupItem) {
+		mediaGroup := item.Data()
+		close(mediaGroup.done)
+	})
+
+	bot = &Bot{BotConfig: botConfig, BotAPI: &BotAPI{BotAPI: b, mediaGroups: mediaGroups}}
 	clog.Success("[Bot] Load completed")
 	return nil
 }
@@ -180,6 +187,99 @@ func (bot *Bot) handleUpdate(update *botapi.Update) {
 	}
 }
 
+func generateMediaGroup(msgs []*botapi.Message, baseChat botapi.BaseChat) (botapi.MediaGroupConfig, error) {
+	var medias []botapi.InputMedia
+	for _, msg := range msgs {
+		var inputMedia botapi.InputMedia
+		baseInputMedia := botapi.BaseInputMedia{
+			Caption:               msg.Caption,
+			CaptionEntities:       msg.CaptionEntities,
+			ShowCaptionAboveMedia: msg.ShowCaptionAboveMedia,
+			HasSpoiler:            msg.HasMediaSpoiler,
+		}
+
+		switch {
+		case msg.Audio != nil:
+			media := msg.Audio
+
+			baseInputMedia.Type = "audio"
+			baseInputMedia.Media = botapi.FileID(media.FileID)
+
+			var thumb botapi.RequestFileData
+			if media.Thumbnail != nil {
+				thumb = botapi.FileID(media.Thumbnail.FileID)
+			}
+
+			inputMedia = &botapi.InputMediaAudio{
+				BaseInputMedia: baseInputMedia,
+				Thumb:          thumb,
+				Title:          media.Title,
+				Performer:      media.Performer,
+				Duration:       media.Duration,
+			}
+
+		case msg.Document != nil:
+			media := msg.Document
+
+			baseInputMedia.Type = "ducument"
+			baseInputMedia.Media = botapi.FileID(media.FileID)
+
+			var thumb botapi.RequestFileData
+			if media.Thumbnail != nil {
+				thumb = botapi.FileID(media.Thumbnail.FileID)
+			}
+
+			inputMedia = &botapi.InputMediaDocument{
+				BaseInputMedia: baseInputMedia,
+				Thumb:          thumb,
+			}
+
+		case msg.Photo != nil:
+			var media botapi.PhotoSize
+			for _, photo := range msg.Photo {
+				if photo.FileSize > media.FileSize {
+					media = photo
+				}
+			}
+
+			baseInputMedia.Type = "photo"
+			baseInputMedia.Media = botapi.FileID(media.FileID)
+
+			inputMedia = &botapi.InputMediaPhoto{
+				BaseInputMedia: baseInputMedia,
+			}
+
+		case msg.Video != nil:
+			media := msg.Video
+
+			baseInputMedia.Type = "video"
+			baseInputMedia.Media = botapi.FileID(media.FileID)
+
+			var thumb botapi.RequestFileData
+			if media.Thumbnail != nil {
+				thumb = botapi.FileID(media.Thumbnail.FileID)
+			}
+
+			inputMedia = &botapi.InputMediaVideo{
+				BaseInputMedia: baseInputMedia,
+				Thumb:          thumb,
+				Height:         media.Height,
+				Width:          media.Width,
+				Duration:       media.Duration,
+			}
+		default:
+			return botapi.MediaGroupConfig{}, errors.New("unsupported media type in media group")
+		}
+
+		medias = append(medias, inputMedia)
+	}
+
+	return botapi.MediaGroupConfig{
+		BaseChat: baseChat,
+		Media:    medias,
+	}, nil
+}
+
 func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 	msg := update.Message
 	translator := i18n.GetOrDefault(msg.From.LanguageCode)
@@ -194,18 +294,25 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 		},
 	}
 
-	if msg.ReplyMarkup != nil {
-		text, entities := translator.Error_UnsupportedMessage()
-		_, err := bot.Send(botapi.MessageConfig{
-			BaseChat: currentChat,
-			Text:     text,
-			Entities: entities,
-		})
-		if err != nil {
-			clog.Errorf("[Bot] failed to send message in chat, error: %s", err)
-			return
+	var mediaGroup *MediaGroup
+	if msg.MediaGroupID != "" {
+		_mediaGroup := &MediaGroup{}
+		if bot.mediaGroups.NotFoundAdd(msg.MediaGroupID, mediaGroupLifeSpan, _mediaGroup) {
+			done := make(chan struct{})
+			_mediaGroup.done = done
+
+			_mediaGroup.Add(msg)
+			<-done
+			_mediaGroup.Sort()
+			mediaGroup = _mediaGroup
+		} else {
+			item, err := bot.mediaGroups.Value(msg.MediaGroupID)
+			if err == nil {
+				mediaGroup := item.Data()
+				mediaGroup.Add(msg)
+				return
+			}
 		}
-		return
 	}
 
 	// Message types
@@ -277,16 +384,6 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 				Entities: entities,
 			})
 		}
-		return
-	}
-
-	if bot.GroupId == 0 {
-		text, entities := translator.Error_NoForwardGroup()
-		bot.Send(botapi.MessageConfig{
-			BaseChat: currentChat,
-			Text:     text,
-			Entities: entities,
-		})
 		return
 	}
 
@@ -405,38 +502,77 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 	}
 
 	if msg.ForwardOrigin != nil {
-		result, err := bot.Send(botapi.ForwardConfig{
-			BaseChat: botTopic,
-			FromChat: botapi.ChatConfig{
-				ChatID: msg.Chat.ID,
-			},
-			MessageID: msg.MessageID,
-		})
-		if err != nil {
-			err, ok := err.(*botapi.Error)
-			if !ok {
-				text, entities := translator.Error()
+		if mediaGroup == nil {
+			result, err := bot.Send(botapi.ForwardConfig{
+				BaseChat:  botTopic,
+				FromChat:  currentChatConfig,
+				MessageID: msg.MessageID,
+			})
+			if err != nil {
+				err, ok := err.(*botapi.Error)
+				if !ok {
+					text, entities := translator.Error()
+					bot.Send(botapi.MessageConfig{
+						BaseChat: currentChat,
+						Text:     text,
+						Entities: entities,
+					})
+					clog.Errorf("[Bot] failed to forward message to group, error: %s", err)
+					return
+				}
+
 				bot.Send(botapi.MessageConfig{
 					BaseChat: currentChat,
-					Text:     text,
-					Entities: entities,
+					Text:     err.Message,
 				})
-				clog.Errorf("[Bot] failed to forward message to group, error: %s", err)
 				return
 			}
 
-			bot.Send(botapi.MessageConfig{
-				BaseChat: currentChat,
-				Text:     err.Message,
+			DB().Create(&model.Msg{
+				TopicId:    topic.Id,
+				UserMsgId:  msg.MessageID,
+				TopicMsgId: result.MessageID,
 			})
-			return
+		} else {
+			message_ids, err := bot.ForwardMessages(botapi.ForwardMessagesConfig{
+				BaseChat:   botTopic,
+				FromChat:   currentChatConfig,
+				MessageIDs: mediaGroup.MessageIds(),
+			})
+			if err != nil {
+				err, ok := err.(*botapi.Error)
+				if !ok {
+					text, entities := translator.Error()
+					bot.Send(botapi.MessageConfig{
+						BaseChat: currentChat,
+						Text:     text,
+						Entities: entities,
+					})
+					clog.Errorf("[Bot] failed to forward messages to group, error: %s", err)
+					return
+				}
+
+				bot.Send(botapi.MessageConfig{
+					BaseChat: currentChat,
+					Text:     err.Message,
+				})
+				return
+			}
+
+			var msgs []model.Msg
+			for i, msg := range mediaGroup.Messages {
+				topic_message_id := message_ids[i].MessageID
+
+				msgs = append(msgs, model.Msg{
+					TopicId:    topic.Id,
+					UserMsgId:  msg.MessageID,
+					TopicMsgId: topic_message_id,
+				})
+			}
+
+			DB().Create(msgs)
 		}
 
-		DB().Create(&model.Msg{
-			TopicId:    topic.Id,
-			UserMsgId:  msg.MessageID,
-			TopicMsgId: result.MessageID,
-		})
 		return
 	}
 
@@ -464,11 +600,61 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 		}
 	}
 
+	if mediaGroup != nil {
+		mediaGroupConfig, err := generateMediaGroup(mediaGroup.Messages, botTopic)
+		if err != nil {
+			text, entities := translator.Error_UnsupportedMessage()
+			_, err := bot.Send(botapi.MessageConfig{
+				BaseChat: currentChat,
+				Text:     text,
+				Entities: entities,
+			})
+			if err != nil {
+				clog.Errorf("[Bot] failed to send message in chat, error: %s", err)
+				return
+			}
+			return
+		}
+
+		results, err := bot.SendMediaGroup(mediaGroupConfig)
+		if err != nil {
+			err, ok := err.(*botapi.Error)
+			if !ok {
+				text, entities := translator.Error()
+				bot.Send(botapi.MessageConfig{
+					BaseChat: currentChat,
+					Text:     text,
+					Entities: entities,
+				})
+				clog.Errorf("[Bot] failed to send messages to group, error: %s", err)
+				return
+			}
+
+			bot.Send(botapi.MessageConfig{
+				BaseChat: currentChat,
+				Text:     err.Message,
+			})
+			return
+		}
+
+		var msgs []model.Msg
+		for i, msg := range mediaGroup.Messages {
+			topic_message_id := results[i].MessageID
+
+			msgs = append(msgs, model.Msg{
+				TopicId:    topic.Id,
+				UserMsgId:  msg.MessageID,
+				TopicMsgId: topic_message_id,
+			})
+		}
+
+		DB().Create(msgs)
+		return
+	}
+
 	result, err := bot.Send(botapi.CopyMessageConfig{
-		BaseChat: botTopic,
-		FromChat: botapi.ChatConfig{
-			ChatID: msg.Chat.ID,
-		},
+		BaseChat:  botTopic,
+		FromChat:  currentChatConfig,
 		MessageID: msg.MessageID,
 	})
 	if err != nil {
@@ -476,14 +662,7 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 		if !ok {
 			text, entities := translator.Error()
 			bot.Send(botapi.MessageConfig{
-				BaseChat: botapi.BaseChat{
-					ChatConfig: botapi.ChatConfig{
-						ChatID: msg.Chat.ID,
-					},
-					ReplyParameters: botapi.ReplyParameters{
-						MessageID: msg.MessageID,
-					},
-				},
+				BaseChat: currentChat,
 				Text:     text,
 				Entities: entities,
 			})
@@ -492,15 +671,8 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 		}
 
 		bot.Send(botapi.MessageConfig{
-			BaseChat: botapi.BaseChat{
-				ChatConfig: botapi.ChatConfig{
-					ChatID: msg.Chat.ID,
-				},
-				ReplyParameters: botapi.ReplyParameters{
-					MessageID: msg.MessageID,
-				},
-			},
-			Text: err.Message,
+			BaseChat: currentChat,
+			Text:     err.Message,
 		})
 		return
 	}
@@ -857,20 +1029,6 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 		MessageID:  msg.MessageID,
 	}
 
-	if msg.ReplyMarkup != nil {
-		text, entities := translator.Error_UnsupportedMessage()
-		_, err := bot.Send(botapi.MessageConfig{
-			BaseChat: currentChat,
-			Text:     text,
-			Entities: entities,
-		})
-		if err != nil {
-			clog.Errorf("[Bot] failed to send message in chat, error: %s", err)
-			return
-		}
-		return
-	}
-
 	// Message types
 	var isUnsupportMessage bool
 	switch {
@@ -984,7 +1142,7 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 				Entities: entities,
 			})
 			if err != nil {
-				clog.Errorf("[Bot] failed to send message in chat, error: %s", err)
+				clog.Errorf("[Bot] failed to send message in user chat, error: %s", err)
 				return
 			}
 		}
@@ -1367,6 +1525,27 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 		return
 	}
 
+	var mediaGroup *MediaGroup
+	if msg.MediaGroupID != "" {
+		_mediaGroup := &MediaGroup{}
+		if bot.mediaGroups.NotFoundAdd(msg.MediaGroupID, mediaGroupLifeSpan, _mediaGroup) {
+			done := make(chan struct{})
+			_mediaGroup.done = done
+
+			_mediaGroup.Add(msg)
+			<-done
+			_mediaGroup.Sort()
+			mediaGroup = _mediaGroup
+		} else {
+			item, err := bot.mediaGroups.Value(msg.MediaGroupID)
+			if err == nil {
+				mediaGroup := item.Data()
+				mediaGroup.Add(msg)
+				return
+			}
+		}
+	}
+
 	bot.bot.RLock()
 	defer bot.bot.RUnlock()
 
@@ -1399,7 +1578,7 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 			Entities: entities,
 		})
 		if err != nil {
-			clog.Errorf("[Bot] failed to send message in chat, error: %s", err)
+			clog.Errorf("[Bot] failed to send message in group, error: %s", err)
 			return
 		}
 		return
@@ -1592,11 +1771,167 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 	}
 
 	if msg.ForwardOrigin != nil {
-		result, err := bot.Send(botapi.ForwardConfig{
-			BaseChat:  userChat,
-			FromChat:  currentChatConfig,
-			MessageID: msg.MessageID,
-		})
+		if mediaGroup == nil {
+			result, err := bot.Send(botapi.ForwardConfig{
+				BaseChat:  userChat,
+				FromChat:  currentChatConfig,
+				MessageID: msg.MessageID,
+			})
+			if err != nil {
+				err, ok := err.(*botapi.Error)
+				if !ok {
+					text, entities := translator.Error()
+					bot.Send(botapi.MessageConfig{
+						BaseChat: currentChat,
+						Text:     text,
+						Entities: entities,
+					})
+					clog.Errorf("[Bot] failed to forward message to user chat, error: %s", err)
+					return
+				}
+
+				if strings.Contains(err.Message, "bot was blocked by the user") {
+					bot.Request(botapi.DeleteForumTopicConfig{
+						BaseForum: currentForum,
+					})
+					topic.TopicId = 0
+
+					if topic.IsBan {
+						DB().Save(&topic)
+					} else {
+						DB().Delete(&topic)
+					}
+
+					DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
+
+					text, entities := translator.Blocked(topic.UserId)
+					bot.Send(botapi.MessageConfig{
+						BaseChat: currentGroup,
+						Text:     text,
+						Entities: entities,
+					})
+					return
+				}
+
+				bot.Send(botapi.MessageConfig{
+					BaseChat: currentChat,
+					Text:     err.Message,
+				})
+				return
+			}
+
+			DB().Create(&model.Msg{
+				TopicId:    topic.Id,
+				UserMsgId:  result.MessageID,
+				TopicMsgId: msg.MessageID,
+			})
+		} else {
+			message_ids, err := bot.ForwardMessages(botapi.ForwardMessagesConfig{
+				BaseChat:   userChat,
+				FromChat:   currentChatConfig,
+				MessageIDs: mediaGroup.MessageIds(),
+			})
+			if err != nil {
+				err, ok := err.(*botapi.Error)
+				if !ok {
+					text, entities := translator.Error()
+					bot.Send(botapi.MessageConfig{
+						BaseChat: currentChat,
+						Text:     text,
+						Entities: entities,
+					})
+					clog.Errorf("[Bot] failed to forward messages to user chat, error: %s", err)
+					return
+				}
+
+				if strings.Contains(err.Message, "bot was blocked by the user") {
+					bot.Request(botapi.DeleteForumTopicConfig{
+						BaseForum: currentForum,
+					})
+					topic.TopicId = 0
+
+					if topic.IsBan {
+						DB().Save(&topic)
+					} else {
+						DB().Delete(&topic)
+					}
+
+					DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
+
+					text, entities := translator.Blocked(topic.UserId)
+					bot.Send(botapi.MessageConfig{
+						BaseChat: currentGroup,
+						Text:     text,
+						Entities: entities,
+					})
+					return
+				}
+
+				bot.Send(botapi.MessageConfig{
+					BaseChat: currentChat,
+					Text:     err.Message,
+				})
+				return
+			}
+
+			var msgs []model.Msg
+			for i, msg := range mediaGroup.Messages {
+				user_message_id := message_ids[i].MessageID
+
+				msgs = append(msgs, model.Msg{
+					TopicId:    topic.Id,
+					UserMsgId:  user_message_id,
+					TopicMsgId: msg.MessageID,
+				})
+			}
+
+			DB().Create(msgs)
+		}
+
+		return
+	}
+
+	if msg.ReplyToMessage != nil && msg.ReplyToMessage.MessageID != msg.MessageThreadID {
+		var message model.Msg
+		err := DB().Where("topic_id", topic.Id).Where("topic_msg_id", msg.ReplyToMessage.MessageID).Find(&message).Error
+		if err != nil {
+			clog.Errorf("[DB] failed to query database, error: %s", err)
+
+			text, entities := translator.Error_Database()
+			bot.Send(botapi.MessageConfig{
+				BaseChat: currentChat,
+				Text:     text,
+				Entities: entities,
+			})
+			return
+		}
+
+		userChat.ReplyParameters.MessageID = message.UserMsgId
+
+		if msg.Quote != nil && msg.Quote.IsManual {
+			userChat.ReplyParameters.Quote = msg.Quote.Text
+			userChat.ReplyParameters.QuoteEntities = msg.Quote.Entities
+			userChat.ReplyParameters.QuotePosition = msg.Quote.Position
+		}
+	}
+
+	if mediaGroup != nil {
+		mediaGroupConfig, err := generateMediaGroup(mediaGroup.Messages, userChat)
+		if err != nil {
+			text, entities := translator.Error_UnsupportedMessage()
+			_, err := bot.Send(botapi.MessageConfig{
+				BaseChat: currentChat,
+				Text:     text,
+				Entities: entities,
+			})
+			if err != nil {
+				clog.Errorf("[Bot] failed to send message in group, error: %s", err)
+				return
+			}
+			return
+		}
+
+		results, err := bot.SendMediaGroup(mediaGroupConfig)
 		if err != nil {
 			err, ok := err.(*botapi.Error)
 			if !ok {
@@ -1606,7 +1941,7 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 					Text:     text,
 					Entities: entities,
 				})
-				clog.Errorf("[Bot] failed to forward message to user chat, error: %s", err)
+				clog.Errorf("[Bot] failed to send messages to user chat, error: %s", err)
 				return
 			}
 
@@ -1640,36 +1975,19 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 			return
 		}
 
-		DB().Create(&model.Msg{
-			TopicId:    topic.Id,
-			UserMsgId:  result.MessageID,
-			TopicMsgId: msg.MessageID,
-		})
-		return
-	}
+		var msgs []model.Msg
+		for i, msg := range mediaGroup.Messages {
+			user_message_id := results[i].MessageID
 
-	if msg.ReplyToMessage != nil && msg.ReplyToMessage.MessageID != msg.MessageThreadID {
-		var message model.Msg
-		err := DB().Where("topic_id", topic.Id).Where("topic_msg_id", msg.ReplyToMessage.MessageID).Find(&message).Error
-		if err != nil {
-			clog.Errorf("[DB] failed to query database, error: %s", err)
-
-			text, entities := translator.Error_Database()
-			bot.Send(botapi.MessageConfig{
-				BaseChat: currentChat,
-				Text:     text,
-				Entities: entities,
+			msgs = append(msgs, model.Msg{
+				TopicId:    topic.Id,
+				UserMsgId:  user_message_id,
+				TopicMsgId: msg.MessageID,
 			})
-			return
 		}
 
-		userChat.ReplyParameters.MessageID = message.UserMsgId
-
-		if msg.Quote != nil && msg.Quote.IsManual {
-			userChat.ReplyParameters.Quote = msg.Quote.Text
-			userChat.ReplyParameters.QuoteEntities = msg.Quote.Entities
-			userChat.ReplyParameters.QuotePosition = msg.Quote.Position
-		}
+		DB().Create(msgs)
+		return
 	}
 
 	result, err := bot.Send(botapi.CopyMessageConfig{
@@ -1686,7 +2004,7 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 				Text:     text,
 				Entities: entities,
 			})
-			clog.Errorf("[Bot] failed to send message in chat, error: %s", err)
+			clog.Errorf("[Bot] failed to send message in group, error: %s", err)
 			return
 		}
 
@@ -1837,7 +2155,7 @@ func (bot *Bot) handleTopicEditMessage(update *botapi.Update) {
 			Entities: entities,
 		})
 		if err != nil {
-			clog.Errorf("[Bot] failed to send message in chat, error: %s", err)
+			clog.Errorf("[Bot] failed to send message in group, error: %s", err)
 			return
 		}
 		return

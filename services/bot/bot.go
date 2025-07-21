@@ -221,7 +221,7 @@ func generateMediaGroup(msgs []*botapi.Message, baseChat botapi.BaseChat) (botap
 		case msg.Document != nil:
 			media := msg.Document
 
-			baseInputMedia.Type = "ducument"
+			baseInputMedia.Type = "document"
 			baseInputMedia.Media = botapi.FileID(media.FileID)
 
 			var thumb botapi.RequestFileData

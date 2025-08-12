@@ -509,22 +509,21 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 				MessageID: msg.MessageID,
 			})
 			if err != nil {
-				err, ok := err.(*botapi.Error)
-				if !ok {
-					text, entities := translator.Error()
+				if err, ok := err.(*botapi.Error); ok {
 					bot.Send(botapi.MessageConfig{
 						BaseChat: currentChat,
-						Text:     text,
-						Entities: entities,
+						Text:     err.Message,
 					})
-					clog.Errorf("[Bot] failed to forward message to group, error: %s", err)
 					return
 				}
 
+				text, entities := translator.Error()
 				bot.Send(botapi.MessageConfig{
 					BaseChat: currentChat,
-					Text:     err.Message,
+					Text:     text,
+					Entities: entities,
 				})
+				clog.Errorf("[Bot] failed to forward message to group, error: %s", err)
 				return
 			}
 
@@ -540,22 +539,21 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 				MessageIDs: mediaGroup.MessageIds(),
 			})
 			if err != nil {
-				err, ok := err.(*botapi.Error)
-				if !ok {
-					text, entities := translator.Error()
+				if err, ok := err.(*botapi.Error); ok {
 					bot.Send(botapi.MessageConfig{
 						BaseChat: currentChat,
-						Text:     text,
-						Entities: entities,
+						Text:     err.Message,
 					})
-					clog.Errorf("[Bot] failed to forward messages to group, error: %s", err)
 					return
 				}
 
+				text, entities := translator.Error()
 				bot.Send(botapi.MessageConfig{
 					BaseChat: currentChat,
-					Text:     err.Message,
+					Text:     text,
+					Entities: entities,
 				})
+				clog.Errorf("[Bot] failed to forward messages to group, error: %s", err)
 				return
 			}
 
@@ -618,22 +616,21 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 
 		results, err := bot.SendMediaGroup(mediaGroupConfig)
 		if err != nil {
-			err, ok := err.(*botapi.Error)
-			if !ok {
-				text, entities := translator.Error()
+			if err, ok := err.(*botapi.Error); ok {
 				bot.Send(botapi.MessageConfig{
 					BaseChat: currentChat,
-					Text:     text,
-					Entities: entities,
+					Text:     err.Message,
 				})
-				clog.Errorf("[Bot] failed to send messages to group, error: %s", err)
 				return
 			}
 
+			text, entities := translator.Error()
 			bot.Send(botapi.MessageConfig{
 				BaseChat: currentChat,
-				Text:     err.Message,
+				Text:     text,
+				Entities: entities,
 			})
+			clog.Errorf("[Bot] failed to send messages to group, error: %s", err)
 			return
 		}
 
@@ -658,22 +655,21 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 		MessageID: msg.MessageID,
 	})
 	if err != nil {
-		err, ok := err.(*botapi.Error)
-		if !ok {
-			text, entities := translator.Error()
+		if err, ok := err.(*botapi.Error); ok {
 			bot.Send(botapi.MessageConfig{
 				BaseChat: currentChat,
-				Text:     text,
-				Entities: entities,
+				Text:     err.Message,
 			})
-			clog.Errorf("[Bot] failed to copy message to group, error: %s", err)
 			return
 		}
 
+		text, entities := translator.Error()
 		bot.Send(botapi.MessageConfig{
 			BaseChat: currentChat,
-			Text:     err.Message,
+			Text:     text,
+			Entities: entities,
 		})
+		clog.Errorf("[Bot] failed to copy message to group, error: %s", err)
 		return
 	}
 
@@ -979,22 +975,21 @@ func (bot *Bot) handleUserEditMessage(update *botapi.Update) {
 
 	_, err = bot.Send(m)
 	if err != nil {
-		err, ok := err.(*botapi.Error)
-		if !ok {
-			text, entities := translator.Error()
+		if err, ok := err.(*botapi.Error); ok {
 			bot.Send(botapi.MessageConfig{
 				BaseChat: currentChat,
-				Text:     text,
-				Entities: entities,
+				Text:     err.Message,
 			})
-			clog.Errorf("[Bot] failed to edit message in group, error: %s", err)
 			return
 		}
 
+		text, entities := translator.Error()
 		bot.Send(botapi.MessageConfig{
 			BaseChat: currentChat,
-			Text:     err.Message,
+			Text:     text,
+			Entities: entities,
 		})
+		clog.Errorf("[Bot] failed to edit message in group, error: %s", err)
 		return
 	}
 }
@@ -1778,45 +1773,44 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 				MessageID: msg.MessageID,
 			})
 			if err != nil {
-				err, ok := err.(*botapi.Error)
-				if !ok {
-					text, entities := translator.Error()
-					bot.Send(botapi.MessageConfig{
-						BaseChat: currentChat,
-						Text:     text,
-						Entities: entities,
-					})
-					clog.Errorf("[Bot] failed to forward message to user chat, error: %s", err)
-					return
-				}
+				if err, ok := err.(*botapi.Error); ok {
+					if strings.Contains(err.Message, "bot was blocked by the user") {
+						bot.Request(botapi.DeleteForumTopicConfig{
+							BaseForum: currentForum,
+						})
+						topic.TopicId = 0
 
-				if strings.Contains(err.Message, "bot was blocked by the user") {
-					bot.Request(botapi.DeleteForumTopicConfig{
-						BaseForum: currentForum,
-					})
-					topic.TopicId = 0
+						if topic.IsBan {
+							DB().Save(&topic)
+						} else {
+							DB().Delete(&topic)
+						}
 
-					if topic.IsBan {
-						DB().Save(&topic)
-					} else {
-						DB().Delete(&topic)
+						DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
+
+						text, entities := translator.Blocked(topic.UserId)
+						bot.Send(botapi.MessageConfig{
+							BaseChat: currentGroup,
+							Text:     text,
+							Entities: entities,
+						})
+						return
 					}
 
-					DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
-
-					text, entities := translator.Blocked(topic.UserId)
 					bot.Send(botapi.MessageConfig{
-						BaseChat: currentGroup,
-						Text:     text,
-						Entities: entities,
+						BaseChat: currentChat,
+						Text:     err.Message,
 					})
 					return
 				}
 
+				text, entities := translator.Error()
 				bot.Send(botapi.MessageConfig{
 					BaseChat: currentChat,
-					Text:     err.Message,
+					Text:     text,
+					Entities: entities,
 				})
+				clog.Errorf("[Bot] failed to forward message to user chat, error: %s", err)
 				return
 			}
 
@@ -1832,45 +1826,44 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 				MessageIDs: mediaGroup.MessageIds(),
 			})
 			if err != nil {
-				err, ok := err.(*botapi.Error)
-				if !ok {
-					text, entities := translator.Error()
-					bot.Send(botapi.MessageConfig{
-						BaseChat: currentChat,
-						Text:     text,
-						Entities: entities,
-					})
-					clog.Errorf("[Bot] failed to forward messages to user chat, error: %s", err)
-					return
-				}
+				if err, ok := err.(*botapi.Error); ok {
+					if strings.Contains(err.Message, "bot was blocked by the user") {
+						bot.Request(botapi.DeleteForumTopicConfig{
+							BaseForum: currentForum,
+						})
+						topic.TopicId = 0
 
-				if strings.Contains(err.Message, "bot was blocked by the user") {
-					bot.Request(botapi.DeleteForumTopicConfig{
-						BaseForum: currentForum,
-					})
-					topic.TopicId = 0
+						if topic.IsBan {
+							DB().Save(&topic)
+						} else {
+							DB().Delete(&topic)
+						}
 
-					if topic.IsBan {
-						DB().Save(&topic)
-					} else {
-						DB().Delete(&topic)
+						DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
+
+						text, entities := translator.Blocked(topic.UserId)
+						bot.Send(botapi.MessageConfig{
+							BaseChat: currentGroup,
+							Text:     text,
+							Entities: entities,
+						})
+						return
 					}
 
-					DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
-
-					text, entities := translator.Blocked(topic.UserId)
 					bot.Send(botapi.MessageConfig{
-						BaseChat: currentGroup,
-						Text:     text,
-						Entities: entities,
+						BaseChat: currentChat,
+						Text:     err.Message,
 					})
 					return
 				}
 
+				text, entities := translator.Error()
 				bot.Send(botapi.MessageConfig{
 					BaseChat: currentChat,
-					Text:     err.Message,
+					Text:     text,
+					Entities: entities,
 				})
+				clog.Errorf("[Bot] failed to forward messages to user chat, error: %s", err)
 				return
 			}
 
@@ -1933,18 +1926,69 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 
 		results, err := bot.SendMediaGroup(mediaGroupConfig)
 		if err != nil {
-			err, ok := err.(*botapi.Error)
-			if !ok {
-				text, entities := translator.Error()
+			if err, ok := err.(*botapi.Error); ok {
+				if strings.Contains(err.Message, "bot was blocked by the user") {
+					bot.Request(botapi.DeleteForumTopicConfig{
+						BaseForum: currentForum,
+					})
+					topic.TopicId = 0
+
+					if topic.IsBan {
+						DB().Save(&topic)
+					} else {
+						DB().Delete(&topic)
+					}
+
+					DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
+
+					text, entities := translator.Blocked(topic.UserId)
+					bot.Send(botapi.MessageConfig{
+						BaseChat: currentGroup,
+						Text:     text,
+						Entities: entities,
+					})
+					return
+				}
+
 				bot.Send(botapi.MessageConfig{
 					BaseChat: currentChat,
-					Text:     text,
-					Entities: entities,
+					Text:     err.Message,
 				})
-				clog.Errorf("[Bot] failed to send messages to user chat, error: %s", err)
 				return
 			}
 
+			text, entities := translator.Error()
+			bot.Send(botapi.MessageConfig{
+				BaseChat: currentChat,
+				Text:     text,
+				Entities: entities,
+			})
+			clog.Errorf("[Bot] failed to send messages to user chat, error: %s", err)
+			return
+		}
+
+		var msgs []model.Msg
+		for i, msg := range mediaGroup.Messages {
+			user_message_id := results[i].MessageID
+
+			msgs = append(msgs, model.Msg{
+				TopicId:    topic.Id,
+				UserMsgId:  user_message_id,
+				TopicMsgId: msg.MessageID,
+			})
+		}
+
+		DB().Create(msgs)
+		return
+	}
+
+	result, err := bot.Send(botapi.CopyMessageConfig{
+		BaseChat:  userChat,
+		FromChat:  currentChatConfig,
+		MessageID: msg.MessageID,
+	})
+	if err != nil {
+		if err, ok := err.(*botapi.Error); ok {
 			if strings.Contains(err.Message, "bot was blocked by the user") {
 				bot.Request(botapi.DeleteForumTopicConfig{
 					BaseForum: currentForum,
@@ -1975,66 +2019,13 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 			return
 		}
 
-		var msgs []model.Msg
-		for i, msg := range mediaGroup.Messages {
-			user_message_id := results[i].MessageID
-
-			msgs = append(msgs, model.Msg{
-				TopicId:    topic.Id,
-				UserMsgId:  user_message_id,
-				TopicMsgId: msg.MessageID,
-			})
-		}
-
-		DB().Create(msgs)
-		return
-	}
-
-	result, err := bot.Send(botapi.CopyMessageConfig{
-		BaseChat:  userChat,
-		FromChat:  currentChatConfig,
-		MessageID: msg.MessageID,
-	})
-	if err != nil {
-		err, ok := err.(*botapi.Error)
-		if !ok {
-			text, entities := translator.Error()
-			bot.Send(botapi.MessageConfig{
-				BaseChat: currentChat,
-				Text:     text,
-				Entities: entities,
-			})
-			clog.Errorf("[Bot] failed to send message in group, error: %s", err)
-			return
-		}
-
-		if strings.Contains(err.Message, "bot was blocked by the user") {
-			bot.Request(botapi.DeleteForumTopicConfig{
-				BaseForum: currentForum,
-			})
-			topic.TopicId = 0
-
-			if topic.IsBan {
-				DB().Save(&topic)
-			} else {
-				DB().Delete(&topic)
-			}
-
-			DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
-
-			text, entities := translator.Blocked(topic.UserId)
-			bot.Send(botapi.MessageConfig{
-				BaseChat: currentGroup,
-				Text:     text,
-				Entities: entities,
-			})
-			return
-		}
-
+		text, entities := translator.Error()
 		bot.Send(botapi.MessageConfig{
 			BaseChat: currentChat,
-			Text:     err.Message,
+			Text:     text,
+			Entities: entities,
 		})
+		clog.Errorf("[Bot] failed to send message in group, error: %s", err)
 		return
 	}
 
@@ -2198,45 +2189,44 @@ func (bot *Bot) handleTopicEditMessage(update *botapi.Update) {
 
 	_, err = bot.Send(m)
 	if err != nil {
-		err, ok := err.(*botapi.Error)
-		if !ok {
-			text, entities := translator.Error()
-			bot.Send(botapi.MessageConfig{
-				BaseChat: currentChat,
-				Text:     text,
-				Entities: entities,
-			})
-			clog.Errorf("[Bot] failed to edit message in user chat, error: %s", err)
-			return
-		}
+		if err, ok := err.(*botapi.Error); ok {
+			if strings.Contains(err.Message, "bot was blocked by the user") {
+				bot.Request(botapi.DeleteForumTopicConfig{
+					BaseForum: currentForum,
+				})
+				topic.TopicId = 0
 
-		if strings.Contains(err.Message, "bot was blocked by the user") {
-			bot.Request(botapi.DeleteForumTopicConfig{
-				BaseForum: currentForum,
-			})
-			topic.TopicId = 0
+				if topic.IsBan {
+					DB().Save(&topic)
+				} else {
+					DB().Delete(&topic)
+				}
 
-			if topic.IsBan {
-				DB().Save(&topic)
-			} else {
-				DB().Delete(&topic)
+				DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
+
+				text, entities := translator.Blocked(topic.UserId)
+				bot.Send(botapi.MessageConfig{
+					BaseChat: currentGroup,
+					Text:     text,
+					Entities: entities,
+				})
+				return
 			}
 
-			DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
-
-			text, entities := translator.Blocked(topic.UserId)
 			bot.Send(botapi.MessageConfig{
-				BaseChat: currentGroup,
-				Text:     text,
-				Entities: entities,
+				BaseChat: currentChat,
+				Text:     err.Message,
 			})
 			return
 		}
 
+		text, entities := translator.Error()
 		bot.Send(botapi.MessageConfig{
 			BaseChat: currentChat,
-			Text:     err.Message,
+			Text:     text,
+			Entities: entities,
 		})
+		clog.Errorf("[Bot] failed to edit message in user chat, error: %s", err)
 		return
 	}
 }

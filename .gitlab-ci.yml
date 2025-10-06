@@ -13,9 +13,11 @@ test:
     GIT_SUBMODULE_STRATEGY: recursive
     GIT_DEPTH: 0
     GIT_SUBMODULE_DEPTH: 0
-  only:
-    refs:
-      - pushes
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "push"
   before_script:
     # Go Cache
     - sh -c 'mount -t tmpfs tmpfs /tmp || exit 0'
@@ -41,9 +43,8 @@ snapshot:
     GIT_DEPTH: 0
     GIT_SUBMODULE_DEPTH: 0
     GITLAB_TOKEN: $CI_JOB_TOKEN
-  only:
-    refs:
-      - web
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
   before_script:
     # Go Cache
     - sh -c 'mount -t tmpfs tmpfs /tmp || exit 0'
@@ -74,9 +75,8 @@ release:
     GIT_DEPTH: 0
     GIT_SUBMODULE_DEPTH: 0
     GITLAB_TOKEN: $CI_JOB_TOKEN
-  only:
-    refs:
-      - tags
+  rules:
+    - if: $CI_COMMIT_TAG
   before_script:
     # Go Cache
     - sh -c 'mount -t tmpfs tmpfs /tmp || exit 0'

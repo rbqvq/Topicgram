@@ -7,23 +7,13 @@ import (
 	"net/url"
 
 	_ "Topicgram/pkg/proxy/http"
-	"Topicgram/pkg/tcping"
 
 	"golang.org/x/net/proxy"
 )
 
 var dialer proxy.Dialer = proxy.Direct
 
-func Register(us ...*url.URL) error {
-	var u *url.URL
-
-	for _, _u := range us {
-		if tcping.Check(nil, _u.Host) {
-			u = _u
-			break
-		}
-	}
-
+func Register(u *url.URL) error {
 	if u == nil {
 		return errors.New("no proxy can be used")
 	}

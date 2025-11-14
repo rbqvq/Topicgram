@@ -5,7 +5,7 @@ import (
 	"Topicgram/config"
 	"Topicgram/database"
 	"Topicgram/pkg/proxy"
-	"Topicgram/services/bot"
+	"Topicgram/services/bots"
 	"Topicgram/services/webhook"
 	"context"
 	"crypto/tls"
@@ -143,7 +143,7 @@ func main() {
 			return
 		}
 
-		err := bot.Init(conf.Bot)
+		err := bots.Load(conf.Bot)
 		if err != nil {
 			clog.Fatal("[Bot][Initial] failed to init bot, error: ", err)
 			return

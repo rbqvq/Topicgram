@@ -1,7 +1,7 @@
 package webhook
 
 import (
-	"Topicgram/services/bot"
+	"Topicgram/services/bots"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,6 +16,6 @@ func NewEngine() (router *gin.Engine) {
 
 	router.Use(gin.Recovery())
 
-	router.POST("/topicgram/webhook", bot.HookHandler)
+	router.POST("/topicgram/webhook", bots.HookHandler)
 	return
 }

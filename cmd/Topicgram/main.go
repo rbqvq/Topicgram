@@ -4,8 +4,11 @@ import (
 	. "Topicgram/common"
 	"Topicgram/config"
 	"Topicgram/database"
+	_ "Topicgram/i18n/languages"
 	"Topicgram/pkg/proxy"
 	"Topicgram/services/bots"
+	"Topicgram/services/cron"
+	_ "Topicgram/services/cron/jobs"
 	"Topicgram/services/webhook"
 	"context"
 	"crypto/tls"
@@ -19,8 +22,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	_ "Topicgram/i18n/languages"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.com/CoiaPrant/clog"
@@ -149,6 +150,8 @@ func main() {
 			return
 		}
 	}
+
+	cron.Start()
 
 	var srv http.Server
 	{

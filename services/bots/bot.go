@@ -4,8 +4,10 @@ import (
 	. "Topicgram/database"
 	"Topicgram/i18n"
 	"Topicgram/model"
+	"Topicgram/services/captcha"
 	"strconv"
 	"strings"
+	"time"
 
 	botapi "github.com/OvyFlash/telegram-bot-api"
 	"gitlab.com/CoiaPrant/clog"
@@ -67,8 +69,123 @@ func (bot *Bot) handleUpdate(update *botapi.Update) {
 			bot.handleUserEditMessage(update)
 		case update.Message != nil:
 			bot.handleUserNewMessage(update)
+		case update.CallbackQuery != nil:
+			bot.handleUserVerification(update)
 		}
 	}
+}
+
+func (bot *Bot) handleUserVerification(update *botapi.Update) {
+	callback := update.CallbackQuery
+	if len(callback.Data) == 0 {
+		return
+	}
+
+	msg := callback.Message
+	if msg == nil {
+		return
+	}
+
+	if bot.GroupId == 0 {
+		return
+	}
+
+	currentChatConfig := botapi.ChatConfig{
+		ChatID: msg.Chat.ID,
+	}
+	currentChat := botapi.BaseChat{
+		ChatConfig: currentChatConfig,
+		ReplyParameters: botapi.ReplyParameters{
+			AllowSendingWithoutReply: true,
+			MessageID:                msg.MessageID,
+		},
+	}
+	currentMessage := botapi.BaseChatMessage{
+		ChatConfig: currentChatConfig,
+		MessageID:  msg.MessageID,
+	}
+	translator := i18n.GetOrDefault(callback.From.LanguageCode)
+
+	bot.bot.RLock()
+	defer bot.bot.RUnlock()
+
+	bot.topic.Lock()
+	defer bot.topic.Unlock()
+
+	var topic model.Topic
+	err := DB().Where("user_id", callback.From.ID).Find(&topic).Error
+	if err != nil {
+		bot.sendDatabaseError(currentChat, translator, err)
+		return
+	}
+
+	if topic.Id == 0 || topic.Verification != model.VerificationNotCompleted || topic.ChallangeId == 0 || topic.ChallangeSent == 0 {
+		bot.Request(botapi.DeleteMessageConfig{
+			BaseChatMessage: currentMessage,
+		})
+		return
+	}
+
+	if topic.IsBan {
+		bot.Request(botapi.DeleteMessageConfig{
+			BaseChatMessage: currentMessage,
+		})
+		bot.sendBanned(currentChat, translator)
+		return
+	}
+
+	challangeId := topic.ChallangeId
+	notAfter := time.Unix(topic.ChallangeSent, 0).Add(CAPTCHA_DURATION)
+
+	topic.ChallangeSent = 0
+	topic.ChallangeId = 0
+	err = saveTopic(&topic)
+	if err != nil {
+		bot.sendDatabaseError(currentChat, translator, err)
+		return
+	}
+
+	if time.Now().After(notAfter) {
+		bot.Request(botapi.DeleteMessageConfig{
+			BaseChatMessage: currentMessage,
+		})
+		bot.sendCaptchaFailed(currentChat, translator)
+		return
+	}
+
+	if !captcha.CheckMath(bot.Token, challangeId, callback.Data) {
+		bot.Request(botapi.DeleteMessageConfig{
+			BaseChatMessage: currentMessage,
+		})
+		bot.sendCaptchaFailed(currentChat, translator)
+		return
+	}
+
+	topic.Verification = model.VerificationCompleted
+	err = saveTopic(&topic)
+	if err != nil {
+		bot.sendDatabaseError(currentChat, translator, err)
+		return
+	}
+
+	bot.Request(botapi.DeleteMessageConfig{
+		BaseChatMessage: currentMessage,
+	})
+	bot.sendCaptchaCompleted(currentChat, translator)
+
+	if topic.TopicId == 0 {
+		return
+	}
+
+	botTranslator := i18n.GetOrDefault(bot.LanguageCode)
+	botChatConfig := botapi.ChatConfig{
+		ChatID: bot.GroupId,
+	}
+	botTopic := botapi.BaseChat{
+		ChatConfig:      botChatConfig,
+		MessageThreadID: topic.TopicId,
+	}
+	bot.sendCaptchaCompletedNotify(botTopic, botTranslator)
 }
 
 func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
@@ -144,12 +261,47 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 	botTopic := botapi.BaseChat{
 		ChatConfig: botChatConfig,
 	}
+	botTopic.MessageThreadID = topic.TopicId
+
+	switch topic.Verification {
+	case model.VerificationNotSent:
+		if bot.shouldSendCaptcha(msg) {
+			description, replyMarkup := bot.captchaMath(translator, &topic)
+			err := bot.sendCaptcha(currentChat, translator, description, replyMarkup)
+			if err != nil {
+				return
+			}
+
+			topic.UserId = msg.From.ID
+			topic.Verification = model.VerificationNotCompleted
+			topic.ChallangeSent = time.Now().Unix()
+			topic.LanguageCode = msg.From.LanguageCode
+
+			err = saveTopic(&topic)
+			if err != nil {
+				bot.sendDatabaseError(currentChat, translator, err)
+				return
+			}
+
+			if topic.TopicId != 0 {
+				bot.sendCaptchaNotify(botTopic, botTranslator)
+			}
+			return
+		}
+	case model.VerificationNotCompleted:
+		bot.sendCaptchaNotCompleted(currentChat, translator)
+		return
+	}
 
 	switch {
 	case topic.IsBan:
 		bot.sendBanned(currentChat, translator)
 		return
 	case topic.Id == 0:
+		topic.UserId = msg.From.ID
+		topic.LanguageCode = msg.From.LanguageCode
+		fallthrough
+	case topic.TopicId == 0:
 		createdTopic, err := bot.Send(botapi.CreateForumTopicConfig{
 			ChatConfig: botChatConfig,
 			Name:       msg.From.FirstName + " " + msg.From.LastName,
@@ -160,12 +312,9 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 			return
 		}
 
-		topic.UserId = msg.From.ID
-		topic.TopicId = createdTopic.MessageThreadID
-		topic.LanguageCode = msg.From.LanguageCode
-		DB().Create(&topic)
-
 		botTopic.MessageThreadID = createdTopic.MessageThreadID
+		topic.TopicId = createdTopic.MessageThreadID
+		saveTopic(&topic)
 
 		message, err := bot.sendSender(botTopic, botTranslator, msg.From)
 		if err != nil {
@@ -178,8 +327,6 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 				MessageID:  message.MessageID,
 			},
 		})
-	default:
-		botTopic.MessageThreadID = topic.TopicId
 	}
 
 	if msg.HasProtectedContent {
@@ -365,7 +512,9 @@ func (bot *Bot) handleUserEditMessage(update *botapi.Update) {
 	}
 
 	switch {
-	case topic.Id == 0:
+	case topic.Id == 0,
+		topic.TopicId == 0,
+		topic.Verification != model.VerificationCompleted:
 		bot.sendFailedToEdit(currentChat, translator)
 		return
 	case topic.IsBan:
@@ -850,6 +999,11 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 		}
 
 		bot.sendError(currentChat, translator)
+	}
+
+	if topic.Verification != model.VerificationCompleted {
+		topic.Verification = model.VerificationCompleted
+		saveTopic(&topic)
 	}
 
 	if msg.ForwardOrigin != nil {

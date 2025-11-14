@@ -73,6 +73,16 @@ func (bot *BotAPI) ForwardMessages(c botapi.ForwardMessagesConfig) ([]botapi.Mes
 	return messageIds, nil
 }
 
+func (bot *BotAPI) GetChat(config botapi.ChatInfoConfig) (botapi.ChatFullInfo, error) {
+	chat, err := bot.BotAPI.GetChat(config)
+	if err == nil {
+		return chat, err
+	}
+
+	clog.Errorf("[Bot %d] getChat failed, error: %s", bot.Self.ID, err)
+	return chat, err
+}
+
 func (bot *BotAPI) GetChatMember(config botapi.GetChatMemberConfig) (botapi.ChatMember, error) {
 	members, err := bot.BotAPI.GetChatMember(config)
 	if err == nil {

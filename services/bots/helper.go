@@ -45,8 +45,19 @@ func isBlocked(err *botapi.Error) bool {
 	return strings.Contains(err.Message, "bot was blocked by the user")
 }
 
+func saveTopic(topic *model.Topic) error {
+	if topic.Id == 0 {
+		return DB().Create(topic).Error
+	}
+
+	return DB().Save(topic).Error
+}
+
 func banTopic(topic *model.Topic) error {
 	topic.IsBan = true
+	topic.Verification = model.VerificationNotSent
+	topic.ChallangeId = 0
+	topic.ChallangeSent = 0
 
 	if topic.Id == 0 {
 		return DB().Create(topic).Error
@@ -62,6 +73,9 @@ func unbanTopic(topic *model.Topic) error {
 		return DB().Delete(topic).Error
 	}
 
+	topic.Verification = model.VerificationCompleted
+	topic.ChallangeId = 0
+	topic.ChallangeSent = 0
 	return DB().Save(topic).Error
 }
 
@@ -69,7 +83,7 @@ func terminateTopic(topic *model.Topic) error {
 	DB().Model(model.Msg{}).Where("topic_id", topic.Id).Delete(nil)
 	topic.TopicId = 0
 
-	if topic.IsBan {
+	if topic.IsBan || topic.Verification == model.VerificationNotCompleted {
 		return DB().Save(topic).Error
 	}
 

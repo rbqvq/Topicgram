@@ -14,6 +14,7 @@ require (
 	gitlab.com/CoiaPrant/gorm-oracle v0.0.0-20251002083709-fd53b886dc08
 	gitlab.com/CoiaPrant/gorm-sqlite v0.0.0-20240918134430-b2787d19694e
 	gitlab.com/CoiaPrant/telegram-bot-formatter v0.0.0-20250513082100-acf0beaa111d
+	gitlab.com/go-extension/rand v0.0.0-20240303103951-707937a049b5
 	golang.org/x/net v0.47.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.0
@@ -59,11 +60,9 @@ require (
 	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/crypto v0.44.0 // indirect
 	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6 // indirect
-	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
-	golang.org/x/tools v0.39.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	modernc.org/libc v1.66.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

@@ -39,8 +39,8 @@ func (bot *Bot) handleUpdate(update *botapi.Update) {
 		return
 	}
 
-	switch chat.ID {
-	case bot.GroupId:
+	switch {
+	case chat.ID == bot.GroupId:
 		if !chat.IsForum {
 			currentChat := botapi.BaseChat{
 				ChatConfig: botapi.ChatConfig{
@@ -58,12 +58,10 @@ func (bot *Bot) handleUpdate(update *botapi.Update) {
 			bot.handleTopicEditMessage(update)
 		case update.Message != nil:
 			bot.handleTopicNewMessage(update)
-		}
-	default:
-		if !chat.IsPrivate() {
+		default:
 			return
 		}
-
+	case chat.IsPrivate():
 		switch {
 		case update.EditedMessage != nil:
 			bot.handleUserEditMessage(update)
@@ -71,6 +69,8 @@ func (bot *Bot) handleUpdate(update *botapi.Update) {
 			bot.handleUserNewMessage(update)
 		case update.CallbackQuery != nil:
 			bot.handleUserVerification(update)
+		default:
+			return
 		}
 	}
 }

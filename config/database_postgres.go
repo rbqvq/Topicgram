@@ -27,12 +27,13 @@ type Postgres struct {
 }
 
 func (c *Postgres) Open() (gorm.Dialector, error) {
-	configs := make([]string, 0, 9)
+	configs := make([]string, 0, 10)
 	configs = append(configs, fmt.Sprintf("host=%s", c.Host))
 	configs = append(configs, fmt.Sprintf("port=%d", c.Port))
 	configs = append(configs, fmt.Sprintf("user=%s", c.User))
 	configs = append(configs, fmt.Sprintf("password=%s", c.Password))
 	configs = append(configs, fmt.Sprintf("database=%s", c.Name))
+	configs = append(configs, "default_query_exec_mode=describe_exec")
 
 	if c.TLS {
 		if TLSConfig.InsecureSkipVerify {

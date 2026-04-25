@@ -10,6 +10,7 @@ import (
 	"database/sql/driver"
 
 	go_ora "github.com/sijms/go-ora/v2"
+	"gitlab.com/CoiaPrant/clog"
 	oracle "gitlab.com/CoiaPrant/gorm-oracle"
 	"gorm.io/gorm"
 )
@@ -67,6 +68,10 @@ func (c *Oracle) Open() (gorm.Dialector, error) {
 		if !TLSConfig.InsecureSkipVerify {
 			options["SSL VERIFY"] = "TRUE"
 		}
+	}
+
+	if clog.Level() == clog.LevelDebug {
+		options["TRACE FILE"] = "oracle.log"
 	}
 
 	return oracle.New(oracle.Config{

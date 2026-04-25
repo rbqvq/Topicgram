@@ -3,17 +3,17 @@ module Topicgram
 go 1.25.0
 
 require (
-	github.com/OvyFlash/telegram-bot-api v0.0.0-20260403204157-d5553b641929
+	github.com/OvyFlash/telegram-bot-api v0.0.0-20260417154322-26e93143c22a
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/jackc/pgx/v5 v5.9.1
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sijms/go-ora/v2 v2.9.0
 	gitlab.com/CoiaPrant/cache2go v0.0.0-20240325160109-49e77b656916
-	gitlab.com/CoiaPrant/clog v0.0.0-20240125121733-757221e3362e
+	gitlab.com/CoiaPrant/clog v0.0.0-20260424221919-6a297f69669a
 	gitlab.com/CoiaPrant/gorm-oracle v0.0.0-20251002083709-fd53b886dc08
 	gitlab.com/CoiaPrant/gorm-sqlite v0.0.0-20240918134430-b2787d19694e
-	gitlab.com/CoiaPrant/telegram-bot-formatter v0.0.0-20250513082100-acf0beaa111d
+	gitlab.com/CoiaPrant/telegram-bot-formatter v0.0.0-20260411131743-57fc20d263e6
 	gitlab.com/go-extension/rand v0.0.0-20240303103951-707937a049b5
 	golang.org/x/net v0.53.0
 	gorm.io/driver/mysql v1.6.0
@@ -28,7 +28,6 @@ require (
 	github.com/bytedance/sonic/loader v0.5.1 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/fatih/color v1.19.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/gin-contrib/sse v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -56,7 +55,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
-	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.5.1 // indirect
 	golang.org/x/arch v0.26.0 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
@@ -64,8 +63,8 @@ require (
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	modernc.org/libc v1.72.0 // indirect
+	modernc.org/libc v1.72.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.48.2 // indirect
+	modernc.org/sqlite v1.49.1 // indirect
 )

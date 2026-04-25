@@ -34,10 +34,10 @@ var (
 func main() {
 	var conf Config
 	{
-		var config_file string
+		var cfg string
 		{
-			flag.StringVar(&config_file, "config", "config.json", "The config file location")
-			flag.BoolVar(clog.DebugFlag(), "debug", false, "Show debug logs")
+			flag.StringVar(&cfg, "config", "config.json", "The config file location")
+			debug := flag.Bool("debug", false, "Show debug logs")
 			help := flag.Bool("h", false, "Show help")
 			v := flag.Bool("version", false, "Show version")
 			flag.Parse()
@@ -48,12 +48,16 @@ func main() {
 			}
 
 			if *v {
-				clog.Print(version)
+				println(version)
 				return
+			}
+
+			if *debug {
+				clog.SetLevel(clog.LevelDebug)
 			}
 		}
 
-		file, err := os.ReadFile(config_file)
+		file, err := os.ReadFile(cfg)
 		if err != nil {
 			clog.Fatal("[Config] Unable to read config file, error: ", err)
 			return
@@ -70,7 +74,7 @@ func main() {
 		TLSConfig.InsecureSkipVerify = conf.Security.InsecureSkipVerify
 
 		gin.SetMode(gin.ReleaseMode)
-		if version == "dev" || clog.IsDebug() {
+		if version == "dev" || clog.Level() == clog.LevelDebug {
 			gin.SetMode(gin.DebugMode)
 		}
 	}
@@ -153,7 +157,10 @@ func main() {
 
 	cron.Start()
 
-	var srv http.Server
+	srv := &http.Server{
+		Handler:  webhook.Handler(),
+		ErrorLog: log.New(io.Discard, "", 0),
+	}
 	{
 		if conf.Web.Type == "unix" {
 			os.Remove(conf.Web.Listen)
@@ -168,8 +175,6 @@ func main() {
 		if conf.Web.Type == "unix" {
 			os.Chmod(conf.Web.Listen, 0777)
 		}
-
-		srv = http.Server{Handler: webhook.Handler(), ErrorLog: log.New(io.Discard, "", 0)}
 
 		if conf.Web.Cert == "" || conf.Web.Key == "" {
 			go srv.Serve(lis)
@@ -190,5 +195,5 @@ func main() {
 
 	<-sigs
 	srv.Shutdown(context.Background())
-	clog.Print("Exiting")
+	clog.Message("Exiting")
 }

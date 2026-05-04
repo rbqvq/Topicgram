@@ -109,14 +109,12 @@ func Load(botConfig *model.BotConfig) error {
 func HookHandler(c *gin.Context) {
 	token := c.GetHeader("X-Telegram-Bot-Api-Secret-Token")
 	if token != secretToken {
-		c.Header("Content-Type", "application/json")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "bot not found"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "bot not found"})
 		return
 	}
 
 	update, err := bot.HandleUpdate(c.Request)
 	if err != nil {
-		c.Header("Content-Type", "application/json")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

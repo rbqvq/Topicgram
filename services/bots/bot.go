@@ -293,6 +293,15 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 		return
 	}
 
+	sendError := func(err error) {
+		if err, ok := err.(*botapi.Error); ok {
+			bot.sendTelegramError(currentChat, err)
+			return
+		}
+
+		bot.sendError(currentChat, translator)
+	}
+
 	switch {
 	case topic.IsBan:
 		bot.sendBanned(currentChat, translator)
@@ -318,6 +327,7 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 
 		message, err := bot.sendSender(botTopic, botTranslator, msg.From)
 		if err != nil {
+			sendError(err)
 			return
 		}
 
@@ -326,21 +336,13 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 				ChatConfig: botChatConfig,
 				MessageID:  message.MessageID,
 			},
+			DisableNotification: true,
 		})
 	}
 
 	if msg.HasProtectedContent {
 		bot.sendForwardForbidden(currentChat, translator)
 		return
-	}
-
-	sendError := func(err error) {
-		if err, ok := err.(*botapi.Error); ok {
-			bot.sendTelegramError(currentChat, err)
-			return
-		}
-
-		bot.sendError(currentChat, translator)
 	}
 
 	if msg.ForwardOrigin != nil {

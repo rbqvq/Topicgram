@@ -5,7 +5,6 @@ import (
 	"Topicgram/model"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 var DB func() *gorm.DB
@@ -16,7 +15,7 @@ func InitDB(config config.Database) error {
 		return err
 	}
 
-	db, err := gorm.Open(dialector, &gorm.Config{Logger: logger.Discard})
+	db, err := gorm.Open(dialector, &gorm.Config{Logger: logger})
 	if err != nil {
 		return err
 	}

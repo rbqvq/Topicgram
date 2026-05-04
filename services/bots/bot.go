@@ -34,49 +34,98 @@ func (bot *Bot) handleUpdate(update *botapi.Update) {
 		return
 	}
 
-	from := update.SentFrom()
-	if from == nil {
-		return
-	}
-
 	switch {
 	case chat.ID == bot.GroupId:
 		if !chat.IsForum {
+			languageCode := bot.LanguageCode
+			if from := update.SentFrom(); from != nil {
+				languageCode = from.LanguageCode
+			}
+
 			currentChat := botapi.BaseChat{
 				ChatConfig: botapi.ChatConfig{
 					ChatID: chat.ID,
 				},
 			}
-			translator := i18n.GetOrDefault(from.LanguageCode)
+			translator := i18n.GetOrDefault(languageCode)
 
 			bot.sendTopicRequired(currentChat, translator)
 			return
 		}
 
 		switch {
-		case update.EditedMessage != nil:
-			bot.handleTopicEditMessage(update)
 		case update.Message != nil:
-			bot.handleTopicNewMessage(update)
+			bot.handleTopicNewMessage(update.Message)
+		case update.EditedMessage != nil:
+			bot.handleTopicEditMessage(update.EditedMessage)
 		default:
 			return
 		}
 	case chat.IsPrivate():
 		switch {
-		case update.EditedMessage != nil:
-			bot.handleUserEditMessage(update)
-		case update.Message != nil:
-			bot.handleUserNewMessage(update)
+		case update.MyChatMember != nil:
+			bot.handleMyChatMember(update.MyChatMember)
 		case update.CallbackQuery != nil:
-			bot.handleUserVerification(update)
+			bot.handleUserVerification(update.CallbackQuery)
+		case update.Message != nil:
+			bot.handleUserNewMessage(update.Message)
+		case update.EditedMessage != nil:
+			bot.handleUserEditMessage(update.EditedMessage)
 		default:
 			return
 		}
 	}
 }
 
-func (bot *Bot) handleUserVerification(update *botapi.Update) {
-	callback := update.CallbackQuery
+func (bot *Bot) handleMyChatMember(chatMember *botapi.ChatMemberUpdated) {
+	if chatMember.NewChatMember.Status != "kicked" {
+		return
+	}
+
+	if bot.GroupId == 0 {
+		return
+	}
+
+	bot.bot.RLock()
+	defer bot.bot.RUnlock()
+
+	bot.topic.Lock()
+	defer bot.topic.Unlock()
+
+	var topic model.Topic
+	err := DB().Where("user_id", chatMember.From.ID).Find(&topic).Error
+	if err != nil {
+		return
+	}
+
+	if topic.Id == 0 {
+		return
+	}
+
+	if topic.TopicId == 0 {
+		return
+	}
+
+	translator := i18n.GetOrDefault(bot.LanguageCode)
+	botChatConfig := botapi.ChatConfig{
+		ChatID: bot.GroupId,
+	}
+	botChat := botapi.BaseChat{
+		ChatConfig: botChatConfig,
+	}
+	botTopic := botapi.BaseForum{
+		ChatConfig:      botChatConfig,
+		MessageThreadID: topic.TopicId,
+	}
+
+	bot.Request(botapi.DeleteForumTopicConfig{
+		BaseForum: botTopic,
+	})
+	terminateTopic(&topic)
+	bot.sendBlocked(botChat, translator, topic.UserId)
+}
+
+func (bot *Bot) handleUserVerification(callback *botapi.CallbackQuery) {
 	if len(callback.Data) == 0 {
 		return
 	}
@@ -188,8 +237,7 @@ func (bot *Bot) handleUserVerification(update *botapi.Update) {
 	bot.sendCaptchaCompletedNotify(botTopic, botTranslator)
 }
 
-func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
-	msg := update.Message
+func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 	translator := i18n.GetOrDefault(msg.From.LanguageCode)
 
 	currentChatConfig := botapi.ChatConfig{
@@ -259,9 +307,9 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 		ChatConfig: botChatConfig,
 	}
 	botTopic := botapi.BaseChat{
-		ChatConfig: botChatConfig,
+		ChatConfig:      botChatConfig,
+		MessageThreadID: topic.TopicId,
 	}
-	botTopic.MessageThreadID = topic.TopicId
 
 	switch topic.Verification {
 	case model.VerificationNotSent:
@@ -464,8 +512,7 @@ func (bot *Bot) handleUserNewMessage(update *botapi.Update) {
 	})
 }
 
-func (bot *Bot) handleUserEditMessage(update *botapi.Update) {
-	msg := update.EditedMessage
+func (bot *Bot) handleUserEditMessage(msg *botapi.Message) {
 	translator := i18n.GetOrDefault(msg.From.LanguageCode)
 
 	currentChatConfig := botapi.ChatConfig{
@@ -558,8 +605,7 @@ func (bot *Bot) handleUserEditMessage(update *botapi.Update) {
 	}
 }
 
-func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
-	msg := update.Message
+func (bot *Bot) handleTopicNewMessage(msg *botapi.Message) {
 	translator := i18n.GetOrDefault(msg.From.LanguageCode)
 
 	currentChatConfig := botapi.ChatConfig{
@@ -1115,9 +1161,7 @@ func (bot *Bot) handleTopicNewMessage(update *botapi.Update) {
 	})
 }
 
-func (bot *Bot) handleTopicEditMessage(update *botapi.Update) {
-	msg := update.EditedMessage
-
+func (bot *Bot) handleTopicEditMessage(msg *botapi.Message) {
 	// Ignore General Topic
 	if msg.MessageThreadID == 0 {
 		return

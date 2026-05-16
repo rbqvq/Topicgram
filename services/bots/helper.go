@@ -45,6 +45,10 @@ func isBlocked(err *botapi.Error) bool {
 	return strings.Contains(err.Message, "bot was blocked by the user")
 }
 
+func isThreadNotFound(err *botapi.Error) bool {
+	return strings.Contains(err.Message, "message thread not found")
+}
+
 func saveTopic(topic *model.Topic) error {
 	if topic.Id == 0 {
 		return DB().Create(topic).Error

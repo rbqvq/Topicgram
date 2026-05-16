@@ -341,15 +341,7 @@ func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 		return
 	}
 
-	sendError := func(err error) {
-		if err, ok := err.(*botapi.Error); ok {
-			bot.sendTelegramError(currentChat, err)
-			return
-		}
-
-		bot.sendError(currentChat, translator)
-	}
-
+retry:
 	switch {
 	case topic.IsBan:
 		bot.sendBanned(currentChat, translator)
@@ -375,7 +367,11 @@ func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 
 		message, err := bot.sendSender(botTopic, botTranslator, msg.From)
 		if err != nil {
-			sendError(err)
+			if err, ok := err.(*botapi.Error); ok {
+				bot.sendTelegramError(currentChat, err)
+				return
+			}
+			bot.sendError(currentChat, translator)
 			return
 		}
 
@@ -401,7 +397,16 @@ func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 				MessageIDs: mediaGroup.MessageIds(),
 			})
 			if err != nil {
-				sendError(err)
+				if err, ok := err.(*botapi.Error); ok {
+					if isThreadNotFound(err) {
+						topic.TopicId = 0
+						goto retry
+					}
+
+					bot.sendTelegramError(currentChat, err)
+					return
+				}
+				bot.sendError(currentChat, translator)
 				return
 			}
 
@@ -432,7 +437,16 @@ func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 			MessageID: msg.MessageID,
 		})
 		if err != nil {
-			sendError(err)
+			if err, ok := err.(*botapi.Error); ok {
+				if isThreadNotFound(err) {
+					topic.TopicId = 0
+					goto retry
+				}
+
+				bot.sendTelegramError(currentChat, err)
+				return
+			}
+			bot.sendError(currentChat, translator)
 			return
 		}
 
@@ -470,7 +484,16 @@ func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 
 		messages, err := bot.SendMediaGroup(mediaGroupConfig)
 		if err != nil {
-			sendError(err)
+			if err, ok := err.(*botapi.Error); ok {
+				if isThreadNotFound(err) {
+					topic.TopicId = 0
+					goto retry
+				}
+
+				bot.sendTelegramError(currentChat, err)
+				return
+			}
+			bot.sendError(currentChat, translator)
 			return
 		}
 
@@ -501,7 +524,16 @@ func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 		MessageID: msg.MessageID,
 	})
 	if err != nil {
-		sendError(err)
+		if err, ok := err.(*botapi.Error); ok {
+			if isThreadNotFound(err) {
+				topic.TopicId = 0
+				goto retry
+			}
+
+			bot.sendTelegramError(currentChat, err)
+			return
+		}
+		bot.sendError(currentChat, translator)
 		return
 	}
 

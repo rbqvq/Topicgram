@@ -1,6 +1,8 @@
 package bots
 
 import (
+	"slices"
+
 	botapi "github.com/OvyFlash/telegram-bot-api"
 )
 
@@ -8,16 +10,22 @@ func generateEditMessage(msg *botapi.Message, baseEdit botapi.BaseEdit) botapi.C
 	var m botapi.Chattable
 	switch {
 	case msg.Text != "":
+		var linkPreviewOptions botapi.LinkPreviewOptions
+		if msg.LinkPreviewOptions != nil {
+			linkPreviewOptions = *msg.LinkPreviewOptions
+		}
 		m = botapi.EditMessageTextConfig{
-			BaseEdit: baseEdit,
-			Text:     msg.Text,
-			Entities: msg.Entities,
+			BaseEdit:           baseEdit,
+			Text:               msg.Text,
+			Entities:           msg.Entities,
+			LinkPreviewOptions: linkPreviewOptions,
 		}
 	case msg.Animation != nil,
 		msg.PremiumAnimation != nil,
 		msg.Audio != nil,
 		msg.Document != nil,
 		msg.Photo != nil,
+		msg.LivePhoto != nil,
 		msg.Video != nil:
 
 		var inputMedia botapi.InputMedia
@@ -103,18 +111,34 @@ func generateEditMessage(msg *botapi.Message, baseEdit botapi.BaseEdit) botapi.C
 			}
 
 		case msg.Photo != nil:
-			var media botapi.PhotoSize
-			for _, photo := range msg.Photo {
-				if photo.FileSize > media.FileSize {
-					media = photo
-				}
-			}
+			media := slices.MaxFunc(msg.Photo, func(a, b botapi.PhotoSize) int {
+				return b.FileSize - a.FileSize
+			})
 
 			baseInputMedia.Type = "photo"
 			baseInputMedia.Media = botapi.FileID(media.FileID)
 
 			inputMedia = &botapi.InputMediaPhoto{
 				BaseInputMedia: baseInputMedia,
+			}
+
+		case msg.LivePhoto != nil:
+			media := msg.LivePhoto
+
+			baseInputMedia.Type = "live_photo"
+			baseInputMedia.Media = botapi.FileID(media.FileID)
+
+			var photo botapi.RequestFileData
+			if len(media.Photo) > 0 {
+				media := slices.MaxFunc(media.Photo, func(a, b botapi.PhotoSize) int {
+					return b.FileSize - a.FileSize
+				})
+				photo = botapi.FileID(media.FileID)
+			}
+
+			inputMedia = &botapi.InputMediaLivePhoto{
+				BaseInputMedia: baseInputMedia,
+				Photo:          photo,
 			}
 
 		case msg.Video != nil:

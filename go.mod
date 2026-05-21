@@ -3,7 +3,7 @@ module Topicgram
 go 1.25.5
 
 require (
-	github.com/OvyFlash/telegram-bot-api v0.0.0-20260417154322-26e93143c22a
+	github.com/OvyFlash/telegram-bot-api v0.0.0-20260520191229-4464f18f9850
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/jackc/pgx/v5 v5.9.2
@@ -13,9 +13,9 @@ require (
 	gitlab.com/CoiaPrant/clog v0.0.0-20260424221919-6a297f69669a
 	gitlab.com/CoiaPrant/gorm-oracle v0.0.0-20251002083709-fd53b886dc08
 	gitlab.com/CoiaPrant/gorm-sqlite v0.0.0-20240918134430-b2787d19694e
-	gitlab.com/CoiaPrant/telegram-bot-formatter v0.0.0-20260504200044-103f598a8aac
+	gitlab.com/CoiaPrant/telegram-bot-formatter v0.0.0-20260504203004-f014693ebc19
 	gitlab.com/go-extension/rand v0.0.0-20240303103951-707937a049b5
-	golang.org/x/net v0.53.0
+	golang.org/x/net v0.54.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
@@ -51,20 +51,19 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
-	github.com/quic-go/quic-go v0.59.0 // indirect
+	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.6.0 // indirect
-	golang.org/x/arch v0.26.0 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/arch v0.27.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	modernc.org/libc v1.72.2 // indirect
+	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.50.0 // indirect
+	modernc.org/sqlite v1.50.1 // indirect
 )

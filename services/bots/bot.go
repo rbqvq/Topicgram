@@ -238,6 +238,11 @@ func (bot *Bot) handleUserVerification(callback *botapi.CallbackQuery) {
 }
 
 func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
+	mediaGroup, skip := bot.getMediaGroup(msg)
+	if skip {
+		return
+	}
+
 	translator := i18n.GetOrDefault(msg.From.LanguageCode)
 
 	currentChatConfig := botapi.ChatConfig{
@@ -248,11 +253,6 @@ func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 		ReplyParameters: botapi.ReplyParameters{
 			MessageID: msg.MessageID,
 		},
-	}
-
-	mediaGroup, skip := bot.getMediaGroup(msg)
-	if skip {
-		return
 	}
 
 	switch {
@@ -566,11 +566,8 @@ func (bot *Bot) handleUserEditMessage(msg *botapi.Message) {
 			},
 		})
 		return
-	case isIgnoreMessage(msg):
-		return
-	case isAllowedMessage(msg):
+	case isAllowedEditMessage(msg):
 	default:
-		bot.sendUnsupportedMessage(currentChat, translator)
 		return
 	}
 
@@ -625,6 +622,10 @@ func (bot *Bot) handleUserEditMessage(msg *botapi.Message) {
 	}
 
 	m := generateEditMessage(msg, botEdit)
+	if m == nil {
+		return
+	}
+
 	_, err = bot.Send(m)
 	if err != nil {
 		if err, ok := err.(*botapi.Error); ok {
@@ -1209,7 +1210,6 @@ func (bot *Bot) handleTopicEditMessage(msg *botapi.Message) {
 		MessageID:  msg.MessageID,
 	}
 
-	var isUnsupportMessage bool
 	switch {
 	case isServiceMessage(msg):
 		bot.Request(botapi.DeleteMessageConfig{
@@ -1217,22 +1217,14 @@ func (bot *Bot) handleTopicEditMessage(msg *botapi.Message) {
 		})
 		return
 
-	case isIgnoreMessage(msg):
-		return
-
-	case isAllowedMessage(msg):
+	case isAllowedEditMessage(msg):
 		// Ignored self message
 		if msg.From.ID == bot.Self.ID {
 			return
 		}
 
 	default:
-		// Ignored self message
-		if msg.From.ID == bot.Self.ID {
-			return
-		}
-
-		isUnsupportMessage = true
+		return
 	}
 
 	currentChat := botapi.BaseChat{
@@ -1257,11 +1249,6 @@ func (bot *Bot) handleTopicEditMessage(msg *botapi.Message) {
 	}
 
 	if topic.Id == 0 {
-		return
-	}
-
-	if isUnsupportMessage {
-		bot.sendUnsupportedMessage(currentChat, translator)
 		return
 	}
 
@@ -1294,6 +1281,10 @@ func (bot *Bot) handleTopicEditMessage(msg *botapi.Message) {
 	}
 
 	m := generateEditMessage(msg, userEdit)
+	if m == nil {
+		return
+	}
+
 	_, err = bot.Send(m)
 	if err != nil {
 		if err, ok := err.(*botapi.Error); ok {

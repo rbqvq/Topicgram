@@ -10,35 +10,55 @@ import (
 
 func isServiceMessage(msg *botapi.Message) bool {
 	return (msg.NewChatTitle != "" ||
-		msg.NewChatPhoto != nil ||
-		msg.DeleteChatPhoto ||
-		msg.GroupChatCreated || msg.SuperGroupChatCreated || msg.ChannelChatCreated ||
+		msg.NewChatPhoto != nil || msg.DeleteChatPhoto ||
 		msg.NewChatMembers != nil || msg.LeftChatMember != nil ||
-		msg.PinnedMessage != nil ||
+		msg.GroupChatCreated || msg.SuperGroupChatCreated || msg.ChannelChatCreated ||
 		msg.MessageAutoDeleteTimerChanged != nil ||
-		msg.ConnectedWebsite != "" ||
-		msg.SuccessfulPayment != nil ||
-		msg.WriteAccessAllowed != nil ||
+		msg.PinnedMessage != nil ||
+		msg.BoostAdded != nil ||
+		msg.ChatBackgroundSet != nil ||
+		msg.ChecklistTasksDone != nil || msg.ChecklistTasksAdded != nil ||
+		msg.DirectMessagePriceChanged != nil ||
+		msg.ManagedBotCreated != nil ||
+		msg.PaidMessagePriceChanged != nil ||
+		msg.PollOptionAdded != nil || msg.PollOptionDeleted != nil ||
 		msg.ForumTopicEdited != nil ||
 		msg.GeneralForumTopicHidden != nil || msg.GeneralForumTopicUnhidden != nil ||
 		msg.VideoChatScheduled != nil || msg.VideoChatStarted != nil || msg.VideoChatEnded != nil || msg.VideoChatParticipantsInvited != nil)
 }
 
 func isIgnoreMessage(msg *botapi.Message) bool {
-	return (msg.WebAppData != nil || msg.ReplyMarkup != nil || msg.ForumTopicCreated != nil)
+	return (msg.ChatOwnerLeft != nil || msg.ChatOwnerChanged != nil ||
+		msg.Invoice != nil || msg.SuccessfulPayment != nil || msg.RefundedPayment != nil ||
+		msg.UsersShared != nil || msg.ChatShared != nil ||
+		msg.Gift != nil || msg.UniqueGift != nil || msg.GiftUpgradeSent != nil ||
+		msg.ConnectedWebsite != "" || msg.WriteAccessAllowed != nil ||
+		msg.PassportData != nil ||
+		msg.ProximityAlertTriggered != nil ||
+		msg.GiveawayCreated != nil || msg.GiveawayWinners != nil || msg.GiveawayCompleted != nil ||
+		msg.SuggestedPostApproved != nil || msg.SuggestedPostApprovalFailed != nil || msg.SuggestedPostDeclined != nil ||
+		msg.SuggestedPostPaid != nil || msg.SuggestedPostRefunded != nil ||
+		msg.WebAppData != nil || msg.ReplyMarkup != nil || msg.ForumTopicCreated != nil)
 }
 
 func isAllowedMessage(msg *botapi.Message) bool {
 	return (msg.Text != "" ||
 		msg.Animation != nil || msg.PremiumAnimation != nil ||
 		msg.Audio != nil || msg.Document != nil ||
-		msg.Photo != nil || msg.Sticker != nil ||
+		msg.Photo != nil || msg.LivePhoto != nil ||
+		msg.Sticker != nil ||
 		msg.Video != nil || msg.VideoNote != nil ||
-		msg.Voice != nil)
+		msg.Voice != nil ||
+		msg.Venue != nil || (msg.Location != nil && msg.Location.LivePeriod == 0))
 }
 
-func isUnauthorized(err *botapi.Error) bool {
-	return err.Code == 401 || err.Code == 404
+func isAllowedEditMessage(msg *botapi.Message) bool {
+	return (msg.Text != "" ||
+		msg.Animation != nil || msg.PremiumAnimation != nil ||
+		msg.Audio != nil || msg.Document != nil ||
+		msg.Photo != nil || msg.LivePhoto != nil ||
+		msg.Video != nil || msg.VideoNote != nil ||
+		msg.Voice != nil)
 }
 
 func isBlocked(err *botapi.Error) bool {

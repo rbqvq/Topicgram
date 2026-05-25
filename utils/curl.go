@@ -19,7 +19,6 @@ var (
 	}
 
 	BotClient = &http.Client{
-		Timeout:   60 * time.Second,
 		Transport: defaultTransport,
 	}
 )

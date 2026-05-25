@@ -4,33 +4,20 @@ import (
 	"Topicgram/i18n"
 	"Topicgram/model"
 	"Topicgram/utils"
+	"context"
 	"fmt"
-	"net/http"
-	"net/url"
+	"time"
 
 	botapi "github.com/OvyFlash/telegram-bot-api"
-	"github.com/gin-gonic/gin"
 	"gitlab.com/CoiaPrant/clog"
 )
 
 var (
-	bot         *Bot
-	secretToken string
+	bot      *Bot
+	shutdown context.CancelFunc
 )
 
 func Load(botConfig *model.BotConfig) error {
-	secretToken = utils.MD5(botConfig.WebHook.Host) + utils.SHA256(botConfig.Token)
-
-	webhookConfig := botapi.WebhookConfig{
-		URL: &url.URL{
-			Scheme: "https",
-			Host:   botConfig.WebHook.Host,
-			Path:   "/topicgram/webhook",
-		},
-		MaxConnections: 100,
-		SecretToken:    secretToken,
-	}
-
 	b, err := botapi.NewBotAPIWithClient(botConfig.Token, botapi.APIEndpoint, utils.BotClient)
 	if err != nil {
 		return err
@@ -71,11 +58,6 @@ func Load(botConfig *model.BotConfig) error {
 		}
 	}
 
-	_, err = b.Request(webhookConfig)
-	if err != nil {
-		return err
-	}
-
 	i18n.Range(func(code string, translator i18n.Translator) {
 		if code != "" && len(code) != 2 {
 			return
@@ -102,23 +84,37 @@ func Load(botConfig *model.BotConfig) error {
 	})
 
 	bot = &Bot{BotConfig: botConfig, BotAPI: &BotAPI{BotAPI: b, mediaGroups: mediaGroups}}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	shutdown = cancel
+	go getUpdates(ctx, botapi.UpdateConfig{})
+
 	clog.Success("[Bot] Load completed")
 	return nil
 }
 
-func HookHandler(c *gin.Context) {
-	token := c.GetHeader("X-Telegram-Bot-Api-Secret-Token")
-	if token != secretToken {
-		c.JSON(http.StatusForbidden, gin.H{"error": "bot not found"})
-		return
-	}
+func Shutdown() {
+	shutdown()
+	clog.Infof("[Bot] Shutdown")
+}
 
-	update, err := bot.HandleUpdate(c.Request)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+func getUpdates(ctx context.Context, config botapi.UpdateConfig) {
+	for {
+		updates, err := bot.GetUpdatesWithContext(ctx, config)
+		if err != nil {
+			if ctx.Err() == nil {
+				clog.Errorf("Failed to get updates (%s), retrying in 3 seconds...", err)
+				time.Sleep(time.Second * 3)
+				continue
+			}
+			return
+		}
 
-	go bot.handleUpdate(update)
-	c.String(200, "OK")
+		for _, update := range updates {
+			if update.UpdateID >= config.Offset {
+				config.Offset = update.UpdateID + 1
+				go bot.handleUpdate(&update)
+			}
+		}
+	}
 }

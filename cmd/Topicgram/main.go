@@ -9,21 +9,13 @@ import (
 	"Topicgram/services/bots"
 	"Topicgram/services/cron"
 	_ "Topicgram/services/cron/jobs"
-	"Topicgram/services/webhook"
-	"context"
-	"crypto/tls"
 	"encoding/json"
 	"flag"
-	"io"
-	"log"
-	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/gin-gonic/gin"
 	"gitlab.com/CoiaPrant/clog"
 )
 
@@ -72,11 +64,6 @@ func main() {
 
 	{
 		TLSConfig.InsecureSkipVerify = conf.Security.InsecureSkipVerify
-
-		gin.SetMode(gin.ReleaseMode)
-		if version == "dev" || clog.Level() == clog.LevelDebug {
-			gin.SetMode(gin.DebugMode)
-		}
 	}
 
 	clog.Infof("Bot Version: %s", version)
@@ -142,58 +129,19 @@ func main() {
 			clog.Fatal("[Bot] Invalid Bot Group Id")
 			return
 		}
-
-		if conf.Bot.WebHook.Host == "" {
-			clog.Fatal("[Bot] Invalid WebHook Host")
-			return
-		}
-
-		err := bots.Load(conf.Bot)
-		if err != nil {
-			clog.Fatal("[Bot][Initial] failed to init bot, error: ", err)
-			return
-		}
 	}
 
+	err := bots.Load(conf.Bot)
+	if err != nil {
+		clog.Fatal("[Bot][Initial] failed to init bot, error: ", err)
+		return
+	}
 	cron.Start()
-
-	srv := &http.Server{
-		Handler:  webhook.Handler(),
-		ErrorLog: log.New(io.Discard, "", 0),
-	}
-	{
-		if conf.Web.Type == "unix" {
-			os.Remove(conf.Web.Listen)
-		}
-
-		lis, err := net.Listen(conf.Web.Type, conf.Web.Listen)
-		if err != nil {
-			clog.Fatal("[Web] failed to listen, error: ", err)
-			return
-		}
-
-		if conf.Web.Type == "unix" {
-			os.Chmod(conf.Web.Listen, 0777)
-		}
-
-		if conf.Web.Cert == "" || conf.Web.Key == "" {
-			go srv.Serve(lis)
-		} else {
-			{
-				_, err = tls.LoadX509KeyPair(conf.Web.Cert, conf.Web.Key)
-				if err != nil {
-					clog.Fatal("[Web] failed to load tls certificate, error: ", err)
-					return
-				}
-			}
-			go srv.ServeTLS(lis, conf.Web.Cert, conf.Web.Key)
-		}
-	}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGTRAP)
 
 	<-sigs
-	srv.Shutdown(context.Background())
+	bots.Shutdown()
 	clog.Message("Exiting")
 }

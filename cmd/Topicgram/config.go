@@ -6,12 +6,6 @@ import (
 )
 
 type Config struct {
-	Web struct {
-		Type      string
-		Listen    string
-		Cert, Key string
-	}
-
 	Database struct {
 		Type string // sqlite3, mysql, postgres, oracle
 

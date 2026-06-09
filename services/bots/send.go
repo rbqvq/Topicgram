@@ -134,7 +134,7 @@ func (bot *BotAPI) sendSender(baseChat botapi.BaseChat, translator i18n.Translat
 		}
 
 		photo := slices.MaxFunc(photos.Photos[0], func(a, b botapi.PhotoSize) int {
-			return b.FileSize - a.FileSize
+			return a.FileSize - b.FileSize
 		})
 		return bot.Send(botapi.PhotoConfig{
 			BaseFile: botapi.BaseFile{

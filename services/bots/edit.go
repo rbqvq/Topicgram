@@ -112,7 +112,7 @@ func generateEditMessage(msg *botapi.Message, baseEdit botapi.BaseEdit) botapi.C
 
 		case msg.Photo != nil:
 			media := slices.MaxFunc(msg.Photo, func(a, b botapi.PhotoSize) int {
-				return b.FileSize - a.FileSize
+				return a.FileSize - b.FileSize
 			})
 
 			baseInputMedia.Type = "photo"
@@ -131,7 +131,7 @@ func generateEditMessage(msg *botapi.Message, baseEdit botapi.BaseEdit) botapi.C
 			var photo botapi.RequestFileData
 			if len(media.Photo) > 0 {
 				media := slices.MaxFunc(media.Photo, func(a, b botapi.PhotoSize) int {
-					return b.FileSize - a.FileSize
+					return a.FileSize - b.FileSize
 				})
 				photo = botapi.FileID(media.FileID)
 			}

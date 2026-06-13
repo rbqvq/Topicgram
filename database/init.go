@@ -15,7 +15,10 @@ func InitDB(config config.Database) error {
 		return err
 	}
 
-	db, err := gorm.Open(dialector, &gorm.Config{Logger: logger})
+	db, err := gorm.Open(dialector, &gorm.Config{
+		AllowGlobalUpdate: true,
+		Logger:            newLogger(),
+	})
 	if err != nil {
 		return err
 	}

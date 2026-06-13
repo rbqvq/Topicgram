@@ -1,14 +1,25 @@
 package database
 
 import (
+	"os"
 	"time"
 
 	"gitlab.com/CoiaPrant/clog"
-	gorm_logger "gorm.io/gorm/logger"
+	"gorm.io/gorm/logger"
 )
 
-var logger = gorm_logger.New(clog.Standard("Database", clog.LevelDebug), gorm_logger.Config{
-	SlowThreshold:             200 * time.Millisecond,
-	LogLevel:                  gorm_logger.Warn,
-	IgnoreRecordNotFoundError: true,
-})
+func newLogger() logger.Interface {
+	logLevel := logger.Silent
+	if clog.Level() == clog.LevelDebug {
+		logLevel = logger.Warn
+	}
+	if os.Getenv("GORM_DEBUG") == "1" {
+		logLevel = logger.Info
+	}
+
+	return logger.New(clog.Printer(2, "Database", clog.LevelDebug), logger.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		IgnoreRecordNotFoundError: true,
+		LogLevel:                  logLevel,
+	})
+}

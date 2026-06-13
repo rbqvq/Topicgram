@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	logger  = cron.PrintfLogger(clog.Standard("CronJob", clog.LevelDebug))
+	logger  = cron.VerbosePrintfLogger(clog.Printer(2, "CronJob", clog.LevelDebug))
 	cronjob = cron.New(cron.WithChain(cron.Recover(logger), cron.SkipIfStillRunning(logger)))
 )
 

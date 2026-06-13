@@ -18,7 +18,7 @@ var (
 )
 
 func Load(botConfig *model.BotConfig) error {
-	b, err := botapi.NewBotAPIWithClient(botConfig.Token, botapi.APIEndpoint, utils.BotClient)
+	b, err := botapi.NewBotAPIWithOptions(botConfig.Token, botapi.WithHTTPClient(utils.BotClient), botapi.WithLoggingDisabled())
 	if err != nil {
 		return err
 	}

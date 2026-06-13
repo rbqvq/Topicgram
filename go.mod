@@ -9,7 +9,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sijms/go-ora/v2 v2.9.0
 	gitlab.com/CoiaPrant/cache2go v0.0.0-20240325160109-49e77b656916
-	gitlab.com/CoiaPrant/clog v0.0.0-20260613124114-13630bc95b14
+	gitlab.com/CoiaPrant/clog v0.0.0-20260613192248-2237bcc96aa9
 	gitlab.com/CoiaPrant/gorm-oracle v0.0.0-20251002083709-fd53b886dc08
 	gitlab.com/CoiaPrant/gorm-sqlite v0.0.0-20240918134430-b2787d19694e
 	gitlab.com/CoiaPrant/telegram-bot-formatter v0.0.0-20260504203004-f014693ebc19

@@ -48,8 +48,10 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 gitlab.com/CoiaPrant/cache2go v0.0.0-20240325160109-49e77b656916 h1:8njdNxDUkvbG07EUufJUkuJHrrztMmEaBQXoxwvbFoM=
 gitlab.com/CoiaPrant/cache2go v0.0.0-20240325160109-49e77b656916/go.mod h1:dcW5aC7zCAIogntV+sMGxmXFSb9U47MYVa4CiqLEx4k=
-gitlab.com/CoiaPrant/clog v0.0.0-20260613124114-13630bc95b14 h1:B6REXdnxcmu0SrsF3szKEBDqYu48jYXZUh64MrIwbj4=
-gitlab.com/CoiaPrant/clog v0.0.0-20260613124114-13630bc95b14/go.mod h1:bTll371IrV5kFhXpy5B9jImRLrm00z5vEn+kL4eBd7g=
+gitlab.com/CoiaPrant/clog v0.0.0-20260613182213-18032c1a88ed h1:zoo57i+toL5t6pzZkApvVsbVYmLm4CoddOTcXkJx4wU=
+gitlab.com/CoiaPrant/clog v0.0.0-20260613182213-18032c1a88ed/go.mod h1:bTll371IrV5kFhXpy5B9jImRLrm00z5vEn+kL4eBd7g=
+gitlab.com/CoiaPrant/clog v0.0.0-20260613192248-2237bcc96aa9 h1:4sCQknCLJMTPE6kbKMavxXBAU/EfB+NuUl/Yk6/Fdj8=
+gitlab.com/CoiaPrant/clog v0.0.0-20260613192248-2237bcc96aa9/go.mod h1:bTll371IrV5kFhXpy5B9jImRLrm00z5vEn+kL4eBd7g=
 gitlab.com/CoiaPrant/gorm-oracle v0.0.0-20251002083709-fd53b886dc08 h1:EVpLRHc2Bfjl0FqVuzr+SWqPLnsvFLyqSHg86WuCkfs=
 gitlab.com/CoiaPrant/gorm-oracle v0.0.0-20251002083709-fd53b886dc08/go.mod h1:KzIHg6ip5Uipws55y8RiD7as6n87SXdp4oMdijHgsuA=
 gitlab.com/CoiaPrant/gorm-sqlite v0.0.0-20240918134430-b2787d19694e h1:UaeLwJNxqV1r4JpB33rRSiJQ/nVOaj+EF/7PSSEgASo=

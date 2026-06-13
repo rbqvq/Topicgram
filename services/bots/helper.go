@@ -42,7 +42,7 @@ func isIgnoreMessage(msg *botapi.Message) bool {
 }
 
 func isAllowedMessage(msg *botapi.Message) bool {
-	return (msg.Text != "" ||
+	return (msg.Text != "" || msg.RichMessage != nil ||
 		msg.Animation != nil || msg.PremiumAnimation != nil ||
 		msg.Audio != nil || msg.Document != nil ||
 		msg.Photo != nil || msg.LivePhoto != nil ||

@@ -18,7 +18,18 @@ var (
 )
 
 func Load(botConfig *model.BotConfig) error {
-	b, err := botapi.NewBotAPIWithOptions(botConfig.Token, botapi.WithHTTPClient(utils.BotClient), botapi.WithLoggingDisabled())
+	options := make([]botapi.BotAPIOption, 0, 3)
+	options = append(options, botapi.WithHTTPClient(utils.BotClient))
+	if clog.Level() == clog.LevelDebug {
+		options = append(options,
+			botapi.WithDebug(true),
+			botapi.WithLogger(clog.Printer(2, "Bot", clog.LevelDebug)),
+		)
+	} else {
+		options = append(options, botapi.WithLoggingDisabled())
+	}
+
+	b, err := botapi.NewBotAPIWithOptions(botConfig.Token, options...)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,8 @@
 package config
 
 import (
+	. "Topicgram/common"
+	"Topicgram/pkg/proxy"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -8,9 +10,6 @@ import (
 	"log"
 	"net"
 	"net/url"
-
-	. "Topicgram/common"
-	"Topicgram/pkg/proxy"
 
 	driver "github.com/go-sql-driver/mysql"
 	"gorm.io/driver/mysql"

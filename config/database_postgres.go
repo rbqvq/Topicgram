@@ -1,11 +1,10 @@
 package config
 
 import (
-	"fmt"
-	"strings"
-
 	. "Topicgram/common"
 	"Topicgram/pkg/proxy"
+	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"

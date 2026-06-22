@@ -4,13 +4,12 @@ import (
 	. "Topicgram/common"
 	"Topicgram/pkg/proxy"
 	"context"
-	"net"
-
 	"database/sql"
 	"database/sql/driver"
+	"net"
+	"os"
 
 	go_ora "github.com/sijms/go-ora/v2"
-	"gitlab.com/CoiaPrant/clog"
 	oracle "gitlab.com/CoiaPrant/gorm-oracle"
 	"gorm.io/gorm"
 )
@@ -70,7 +69,7 @@ func (c *Oracle) Open() (gorm.Dialector, error) {
 		}
 	}
 
-	if clog.Level() == clog.LevelDebug {
+	if os.Getenv("ORACLE_DEBUG") == "1" {
 		options["TRACE FILE"] = "oracle.log"
 	}
 

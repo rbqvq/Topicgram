@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB func() *gorm.DB
+var db *gorm.DB
 
 func InitDB(config config.Database) error {
 	dialector, err := config.Open()
@@ -23,11 +23,9 @@ func InitDB(config config.Database) error {
 		return err
 	}
 
-	err = db.AutoMigrate(model.Topic{}, model.Msg{})
-	if err != nil {
-		return err
-	}
+	return db.AutoMigrate(model.Topic{}, model.Msg{})
+}
 
-	DB = db.Unscoped
-	return nil
+func DB() *gorm.DB {
+	return db.Unscoped()
 }

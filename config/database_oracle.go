@@ -9,7 +9,7 @@ import (
 	"net"
 	"os"
 
-	go_ora "github.com/sijms/go-ora/v2"
+	ora "github.com/sijms/go-ora/v3"
 	oracle "gitlab.com/CoiaPrant/gorm-oracle"
 	"gorm.io/gorm"
 )
@@ -21,8 +21,8 @@ func init() {
 type oracleDriver struct{}
 
 func (*oracleDriver) Open(name string) (driver.Conn, error) {
-	connecter, _ := (&go_ora.OracleDriver{}).OpenConnector(name)
-	connecter.(*go_ora.OracleConnector).Dialer(&oracleProxy{})
+	connecter, _ := (&ora.OracleDriver{}).OpenConnector(name)
+	connecter.(*ora.OracleConnector).Dialer(&oracleProxy{})
 	return connecter.Connect(context.Background())
 }
 

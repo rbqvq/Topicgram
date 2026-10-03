@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	sqlite "gitlab.com/CoiaPrant/gorm-sqlite"
+	"github.com/libtnb/sqlite"
 	"gorm.io/gorm"
 )
 

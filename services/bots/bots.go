@@ -51,10 +51,8 @@ func Load(botConfig *model.BotConfig) error {
 		}
 
 		member, err := b.GetChatMember(botapi.GetChatMemberConfig{
-			ChatConfigWithUser: botapi.ChatConfigWithUser{
-				ChatConfig: chatConfig,
-				UserID:     b.Self.ID,
-			},
+			ChatConfig: chatConfig,
+			UserID:     b.Self.ID,
 		})
 		if err != nil {
 			return err

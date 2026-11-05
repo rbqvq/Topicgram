@@ -110,9 +110,7 @@ func (bot *BotAPI) sendTerminated(baseChat botapi.BaseChat, translator i18n.Tran
 
 func (bot *BotAPI) sendSender(baseChat botapi.BaseChat, translator i18n.Translator, user *botapi.User) (botapi.Message, error) {
 	chat, err := bot.GetChat(botapi.ChatInfoConfig{
-		ChatConfig: botapi.ChatConfig{
-			ChatID: user.ID,
-		},
+		ChatID: user.ID,
 	})
 	if err != nil {
 		return botapi.Message{}, err
@@ -137,10 +135,8 @@ func (bot *BotAPI) sendSender(baseChat botapi.BaseChat, translator i18n.Translat
 			return a.FileSize - b.FileSize
 		})
 		return bot.Send(botapi.PhotoConfig{
-			BaseFile: botapi.BaseFile{
-				BaseChat: baseChat,
-				File:     botapi.FileID(photo.FileID),
-			},
+			BaseChat:        baseChat,
+			File:            botapi.FileID(photo.FileID),
 			Caption:         text,
 			CaptionEntities: entities,
 		})

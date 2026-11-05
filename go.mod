@@ -1,6 +1,6 @@
 module Topicgram
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/OvyFlash/telegram-bot-api v0.0.0-20260826195316-83c4eada97a1

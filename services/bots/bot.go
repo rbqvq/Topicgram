@@ -43,9 +43,7 @@ func (bot *Bot) handleUpdate(update *botapi.Update) {
 			}
 
 			currentChat := botapi.BaseChat{
-				ChatConfig: botapi.ChatConfig{
-					ChatID: chat.ID,
-				},
+				ChatID: chat.ID,
 			}
 			translator := i18n.GetOrDefault(languageCode)
 
@@ -258,10 +256,8 @@ func (bot *Bot) handleUserNewMessage(msg *botapi.Message) {
 	switch {
 	case isServiceMessage(msg):
 		bot.Request(botapi.DeleteMessageConfig{
-			BaseChatMessage: botapi.BaseChatMessage{
-				ChatConfig: currentChatConfig,
-				MessageID:  msg.MessageID,
-			},
+			ChatConfig: currentChatConfig,
+			MessageID:  msg.MessageID,
 		})
 		return
 	case isIgnoreMessage(msg):
@@ -376,10 +372,8 @@ retry:
 		}
 
 		bot.Request(botapi.PinChatMessageConfig{
-			BaseChatMessage: botapi.BaseChatMessage{
-				ChatConfig: botChatConfig,
-				MessageID:  message.MessageID,
-			},
+			ChatConfig:          botChatConfig,
+			MessageID:           message.MessageID,
 			DisableNotification: true,
 		})
 	}
@@ -560,10 +554,8 @@ func (bot *Bot) handleUserEditMessage(msg *botapi.Message) {
 	switch {
 	case isServiceMessage(msg):
 		bot.Request(botapi.DeleteMessageConfig{
-			BaseChatMessage: botapi.BaseChatMessage{
-				ChatConfig: currentChatConfig,
-				MessageID:  msg.MessageID,
-			},
+			ChatConfig: currentChatConfig,
+			MessageID:  msg.MessageID,
 		})
 		return
 	case isAllowedEditMessage(msg):
@@ -613,12 +605,8 @@ func (bot *Bot) handleUserEditMessage(msg *botapi.Message) {
 	}
 
 	botEdit := botapi.BaseEdit{
-		BaseChatMessage: botapi.BaseChatMessage{
-			ChatConfig: botapi.ChatConfig{
-				ChatID: bot.GroupId,
-			},
-			MessageID: message.TopicMsgId,
-		},
+		ChatID:    bot.GroupId,
+		MessageID: message.TopicMsgId,
 	}
 
 	m := generateEditMessage(msg, botEdit)
@@ -739,9 +727,7 @@ func (bot *Bot) handleTopicNewMessage(msg *botapi.Message) {
 
 		userTranslator := i18n.GetOrDefault(topic.LanguageCode)
 		userChat := botapi.BaseChat{
-			ChatConfig: botapi.ChatConfig{
-				ChatID: topic.UserId,
-			},
+			ChatID: topic.UserId,
 		}
 
 		bot.sendBanned(userChat, userTranslator)
@@ -980,9 +966,7 @@ func (bot *Bot) handleTopicNewMessage(msg *botapi.Message) {
 
 	userTranslator := i18n.GetOrDefault(topic.LanguageCode)
 	userChat := botapi.BaseChat{
-		ChatConfig: botapi.ChatConfig{
-			ChatID: topic.UserId,
-		},
+		ChatID: topic.UserId,
 	}
 
 	if strings.HasPrefix(msg.Text, "/") {
@@ -1272,12 +1256,8 @@ func (bot *Bot) handleTopicEditMessage(msg *botapi.Message) {
 		ChatConfig: currentChatConfig,
 	}
 	userEdit := botapi.BaseEdit{
-		BaseChatMessage: botapi.BaseChatMessage{
-			ChatConfig: botapi.ChatConfig{
-				ChatID: topic.UserId,
-			},
-			MessageID: message.UserMsgId,
-		},
+		ChatID:    topic.UserId,
+		MessageID: message.UserMsgId,
 	}
 
 	m := generateEditMessage(msg, userEdit)

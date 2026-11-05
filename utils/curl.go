@@ -2,24 +2,32 @@ package utils
 
 import (
 	. "Topicgram/common"
+	"Topicgram/pkg/proxy"
 	"bytes"
 	"io"
 	"net/http"
 	"time"
-
-	"Topicgram/pkg/proxy"
 )
 
+const defaultTimeout = time.Minute
+
 var (
-	defaultTransport = &http.Transport{
-		DialContext:       proxy.DialContext,
-		ForceAttemptHTTP2: true,
-		DisableKeepAlives: true,
-		TLSClientConfig:   TLSConfig,
+	defaultClient = &http.Client{
+		Timeout: defaultTimeout,
+		Transport: &http.Transport{
+			DialContext:       proxy.DialContext,
+			ForceAttemptHTTP2: true,
+			DisableKeepAlives: true,
+			TLSClientConfig:   TLSConfig,
+		},
 	}
 
 	BotClient = &http.Client{
-		Transport: defaultTransport,
+		Transport: &http.Transport{
+			DialContext:       proxy.DialContext,
+			ForceAttemptHTTP2: true,
+			TLSClientConfig:   TLSConfig,
+		},
 	}
 )
 
@@ -27,25 +35,17 @@ var (
 func Curl(method, url string, data []byte, headers map[string]string) (int, []byte, error) {
 	req, err := http.NewRequest(method, url, bytes.NewReader(data))
 	if err != nil {
-		return 000, nil, err
+		return 0, nil, err
 	}
 
-	if len(headers) > 0 {
-		for k, v := range headers {
-			req.Header.Set(k, v)
-		}
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 
-	client := &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: defaultTransport,
-	}
-
-	response, err := client.Do(req)
+	response, err := defaultClient.Do(req)
 	if err != nil {
-		return 000, nil, err
+		return 0, nil, err
 	}
-
 	defer response.Body.Close()
 
 	resp, err := io.ReadAll(response.Body)

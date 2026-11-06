@@ -9,15 +9,19 @@ import (
 	"gitlab.com/CoiaPrant/cache2go"
 )
 
-const mediaGroupLifeSpan = 3 * time.Second
+const mediaGroupTTL = 3 * time.Second
 
-type (
-	mediaGroupCache = *cache2go.CacheTableOf[string, *MediaGroup]
-	mediaGroupItem  = *cache2go.CacheItemOf[string, *MediaGroup]
-)
+type mediaGroupCache = *cache2go.SlidingCache[string, *MediaGroup]
 
 func NewMediaGroupCache() mediaGroupCache {
-	return cache2go.CacheOf[string, *MediaGroup]()
+	return cache2go.NewSlidingCacheWithCallbacks(
+		cache2go.Callbacks[string, *MediaGroup]{
+			OnRemoved: func(_ string, mediaGroup *MediaGroup, reason cache2go.Reason) {
+				close(mediaGroup.done)
+			},
+		},
+		cache2go.WithInterval(time.Second),
+	)
 }
 
 type MediaGroup struct {
@@ -63,8 +67,8 @@ func (bot *Bot) getMediaGroup(msg *botapi.Message) (*MediaGroup, bool) {
 		return nil, false
 	}
 
-	mediaGroup := &MediaGroup{}
-	if bot.mediaGroups.NotFoundAdd(msg.MediaGroupID, mediaGroupLifeSpan, mediaGroup) {
+	mediaGroup, loaded := bot.mediaGroups.TouchOrStore(msg.MediaGroupID, &MediaGroup{}, mediaGroupTTL)
+	if !loaded {
 		done := make(chan struct{})
 		mediaGroup.done = done
 		mediaGroup.Add(msg)
@@ -74,14 +78,8 @@ func (bot *Bot) getMediaGroup(msg *botapi.Message) (*MediaGroup, bool) {
 		return mediaGroup, false
 	}
 
-	item, err := bot.mediaGroups.Value(msg.MediaGroupID)
-	if err == nil {
-		mediaGroup := item.Data()
-		mediaGroup.Add(msg)
-		return nil, true
-	}
-
-	return nil, false
+	mediaGroup.Add(msg)
+	return nil, true
 }
 
 func generateMediaGroup(msgs []*botapi.Message, baseChat botapi.BaseChat) (botapi.MediaGroupConfig, bool) {

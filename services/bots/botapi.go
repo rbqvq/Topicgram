@@ -16,13 +16,10 @@ type BotAPI struct {
 }
 
 func NewBotAPI(b *botapi.BotAPI) *BotAPI {
-	mediaGroups := NewMediaGroupCache()
-	mediaGroups.AddAboutToDeleteItemCallback(func(item mediaGroupItem) {
-		mediaGroup := item.Data()
-		close(mediaGroup.done)
-	})
-
-	return &BotAPI{BotAPI: b, mediaGroups: mediaGroups}
+	return &BotAPI{
+		BotAPI: b, 
+		mediaGroups: NewMediaGroupCache(),
+	}
 }
 
 func (bot *BotAPI) Request(c botapi.Chattable) (*botapi.APIResponse, error) {

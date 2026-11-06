@@ -86,13 +86,10 @@ func Load(botConfig *model.BotConfig) error {
 		})
 	})
 
-	mediaGroups := NewMediaGroupCache()
-	mediaGroups.AddAboutToDeleteItemCallback(func(item mediaGroupItem) {
-		mediaGroup := item.Data()
-		close(mediaGroup.done)
-	})
-
-	bot = &Bot{BotConfig: botConfig, BotAPI: &BotAPI{BotAPI: b, mediaGroups: mediaGroups}}
+	bot = &Bot{
+		BotConfig: botConfig,
+		BotAPI:    NewBotAPI(b),
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	shutdown = cancel

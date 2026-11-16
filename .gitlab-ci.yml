@@ -27,8 +27,7 @@ test:
     - rm -rf /go
     - ln -sf $GOPATH /go
   script:
-    - go mod tidy -v
-    - go test ./cmd/Topicgram -v
+    - go test ./... -v
 
 snapshot:
   stage: release
